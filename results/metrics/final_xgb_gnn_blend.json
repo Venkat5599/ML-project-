@@ -1,0 +1,20 @@
+{
+  "model": "xgb_gnn_blend",
+  "family": "ensemble",
+  "split": "temporal",
+  "test": {
+    "precision": 0.8991981672394044,
+    "recall": 0.7248384118190212,
+    "f1": 0.8026584867075665,
+    "avg_precision": 0.789935877663395,
+    "roc_auc": 0.9235048668833518,
+    "n_eval": 16670,
+    "n_positive": 1083,
+    "precision@50": 1.0,
+    "recall@50": 0.046168051708217916,
+    "precision@100": 1.0,
+    "recall@100": 0.09233610341643583,
+    "precision@250": 1.0,
+    "recall@250": 0.23084025854108955
+  }
+}

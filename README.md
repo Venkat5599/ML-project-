@@ -8,12 +8,16 @@ evaluation contract, split policy, and framing rules.
 
 ```bash
 pip install -r requirements.txt
-python -m experiments.download_data   # ~700MB, HuggingFace mirror, no auth
-python -m experiments.eda             # figures + stats -> results/
-python -m experiments.baselines       # default models on validation slice
-python -m experiments.anomaly         # isolation forest + autoencoder
-python -m experiments.tune --trials 30
-python -m experiments.evaluate        # final test-window evaluation + ablations
+python -m experiments.download_data    # ~700MB, HuggingFace mirror, no auth
+python -m experiments.eda              # figures + stats -> results/
+python -m experiments.baselines        # default models on validation slice
+python -m experiments.anomaly          # isolation forest + autoencoder
+python -m experiments.tune --trials 30 # Optuna (add --models tuned_xgboost etc.)
+python -m experiments.evaluate         # final test-window evaluation + ablations
+python -m experiments.graph_features   # NetworkX topology features
+python -m experiments.graph_models     # GraphSAGE on GPU
+python -m experiments.hybrid           # weighted/stacked ensemble + calibration
+streamlit run dashboard/app.py         # investigation dashboard
 pytest tests/
 ```
 

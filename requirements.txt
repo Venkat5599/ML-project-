@@ -5,6 +5,7 @@ xgboost>=2.0
 optuna>=3.5
 shap>=0.45
 torch>=2.2
+torch-geometric>=2.6
 networkx>=3.2
 matplotlib>=3.8
 seaborn>=0.13
