@@ -1,4 +1,6 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// 127.0.0.1 not "localhost": Windows resolves localhost to ::1 first, but
+// uvicorn binds IPv4 only -> fetch would hit a dead socket and fail.
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export type AlertRow = {
   tx_id: number;
