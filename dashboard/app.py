@@ -7,6 +7,11 @@ Run from project root:  streamlit run dashboard/app.py
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -137,7 +142,7 @@ def main():
             "score_hybrid", "score_xgb", "score_gnn", "score_iso", "score_ae"]
     show = view[[c for c in cols if c in view.columns]].rename(
         columns=lambda c: c.replace("score_", ""))
-    st.dataframe(show, use_container_width=True, height=320)
+    st.dataframe(show, width="stretch", height=320)
 
     tx_id = st.selectbox("inspect transaction", view["tx_id"].head(500).tolist())
     if tx_id is None:
@@ -168,7 +173,7 @@ def main():
                 pd.DataFrame({"feature": contrib.head(15).index,
                               "shap": contrib.head(15).values,
                               "value": X[0][[cols_f.index(f) for f in contrib.head(15).index]]}),
-                use_container_width=True)
+                width="stretch")
         else:
             st.info("transaction features not found")
 
@@ -176,7 +181,7 @@ def main():
         hops = st.radio("hops", [1, 2], horizontal=True)
         df_label = df.set_index("tx_id")["label"]
         st.plotly_chart(neighborhood_graph(edges, tx_id, df_label, hops=hops),
-                        use_container_width=True)
+                        width="stretch")
 
 
 if __name__ == "__main__":
