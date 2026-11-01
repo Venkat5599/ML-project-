@@ -17,8 +17,11 @@ python -m experiments.evaluate         # final test-window evaluation + ablation
 python -m experiments.graph_features   # NetworkX topology features
 python -m experiments.graph_models     # GraphSAGE on GPU
 python -m experiments.hybrid           # weighted/stacked ensemble + calibration
-streamlit run dashboard/app.py         # investigation dashboard
 pytest tests/
+
+# investigation app (local only)
+python -m uvicorn backend.main:app --port 8000        # FastAPI backend
+cd frontend && bun install && bun dev --port 3001     # Next.js frontend -> http://localhost:3001
 ```
 
 ## Protocol in one line

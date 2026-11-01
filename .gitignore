@@ -11,3 +11,6 @@ models/
 .ipynb_checkpoints/
 .DS_Store
 results/metrics/*.json.tmp
+frontend/node_modules/
+frontend/.next/
+frontend/out/
