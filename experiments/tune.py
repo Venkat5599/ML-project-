@@ -27,7 +27,7 @@ from chainsleuth.splits import feature_cols, temporal_split, xy
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-RBF_SUBSAMPLE = 20_000  # kernel SVM is O(n^2); subsample licit rows for tuning
+RBF_SUBSAMPLE = 10_000  # kernel SVM is O(n^2); subsample to keep trials tractable
 
 
 def _evaluate(model, X_val, y_val) -> tuple[dict, float]:
@@ -64,7 +64,8 @@ def tune_xgb(trial, X_train, y_train, pos_weight):
         scale_pos_weight=trial.suggest_float("scale_pos_weight", pos_weight / 4, pos_weight * 4, log=True),
         min_child_weight=trial.suggest_float("min_child_weight", 0.1, 10, log=True),
         reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 10, log=True),
-        tree_method="hist", eval_metric="aucpr", random_state=SEED, n_jobs=-1,
+        tree_method="hist", device="cuda", eval_metric="aucpr",
+        random_state=SEED, n_jobs=-1,
     )
     m.fit(X_train, y_train)
     return m
@@ -114,6 +115,9 @@ def run_study(name: str, objective, n_trials: int) -> optuna.Study:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--trials", type=int, default=30)
+    parser.add_argument("--models", nargs="*", default=None,
+                        help="subset: tuned_random_forest tuned_xgboost "
+                             "tuned_logistic_regression tuned_svm")
     args = parser.parse_args()
 
     df = load_dataset()
@@ -136,6 +140,8 @@ def main() -> None:
     }
 
     for name, (build, family) in specs.items():
+        if args.models and name not in args.models:
+            continue
         print(f"[{name}] ({args.trials} trials)")
         study = run_study(name, lambda t: ap_of(build(t)), args.trials)
         best = build(optuna.trial.FixedTrial(study.best_params))

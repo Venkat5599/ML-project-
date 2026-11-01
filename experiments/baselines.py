@@ -49,7 +49,8 @@ def build_models(pos_weight: float) -> dict:
             XGBClassifier(
                 n_estimators=300, max_depth=6, learning_rate=0.1,
                 subsample=0.8, colsample_bytree=0.8, scale_pos_weight=pos_weight,
-                tree_method="hist", eval_metric="aucpr", random_state=SEED, n_jobs=-1,
+                tree_method="hist", device="cuda", eval_metric="aucpr",
+                random_state=SEED, n_jobs=-1,
             ),
         ),
         "linear_svm": (

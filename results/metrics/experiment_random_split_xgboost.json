@@ -1,0 +1,21 @@
+{
+  "model": "xgboost",
+  "family": "tabular",
+  "split": "random",
+  "test": {
+    "precision": 0.9827188940092166,
+    "recall": 0.9383938393839384,
+    "f1": 0.960045019696117,
+    "avg_precision": 0.9861107581958879,
+    "roc_auc": 0.9970476105202143,
+    "n_eval": 9313,
+    "n_positive": 909,
+    "precision@50": 1.0,
+    "recall@50": 0.05500550055005501,
+    "precision@100": 1.0,
+    "recall@100": 0.11001100110011001,
+    "precision@250": 1.0,
+    "recall@250": 0.27502750275027504
+  },
+  "note": "optimistic baseline - leaks temporally"
+}

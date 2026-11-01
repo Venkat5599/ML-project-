@@ -1,0 +1,27 @@
+{
+  "model": "tuned_svm",
+  "family": "tabular",
+  "split": "temporal",
+  "val": {
+    "precision": 0.22120866590649943,
+    "recall": 0.9847715736040609,
+    "f1": 0.3612662942271881,
+    "avg_precision": 0.833787120807428,
+    "roc_auc": 0.9526388874412097,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 0.98,
+    "recall@50": 0.0829103214890017,
+    "precision@100": 0.99,
+    "recall@100": 0.16751269035532995,
+    "precision@250": 0.904,
+    "recall@250": 0.3824027072758037,
+    "inference_sec": 4.512
+  },
+  "params": {
+    "kernel": "rbf",
+    "C": 8.471801418819979,
+    "gamma": 0.024810409748678097
+  },
+  "n_trials": 12
+}

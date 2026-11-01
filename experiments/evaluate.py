@@ -64,7 +64,7 @@ def build_supervised(params: dict | None, kind: str, pos_weight: float):
     if kind == "rf":
         return RandomForestClassifier(n_jobs=-1, random_state=SEED, **p)
     if kind == "xgb":
-        return XGBClassifier(tree_method="hist", eval_metric="aucpr",
+        return XGBClassifier(tree_method="hist", device="cuda", eval_metric="aucpr",
                              random_state=SEED, n_jobs=-1, **p)
     if kind == "svm":
         kernel = p.pop("kernel", "linear")
@@ -183,7 +183,8 @@ def main() -> None:
                              {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.1,
                               "subsample": 0.8, "colsample_bytree": 0.8,
                               "scale_pos_weight": float((yr_fit == 0).sum() / max((yr_fit == 1).sum(), 1))}),
-                          tree_method="hist", eval_metric="aucpr", random_state=SEED, n_jobs=-1)
+                          tree_method="hist", device="cuda", eval_metric="aucpr",
+                          random_state=SEED, n_jobs=-1)
     xgb_r.fit(Xr_fit, yr_fit)
     rs = xgb_r.predict_proba(Xr_test)[:, 1]
     m = evaluate_scores(yr_test, rs)
@@ -199,7 +200,7 @@ def main() -> None:
     X30_fit, _ = xy(fit_df, top30)
     X30_test, _ = xy(test, top30)
     xgb30 = XGBClassifier(**(load_tuned("tuned_xgboost") or {}), tree_method="hist",
-                          eval_metric="aucpr", random_state=SEED, n_jobs=-1)
+                          device="cuda", eval_metric="aucpr", random_state=SEED, n_jobs=-1)
     xgb30.fit(X30_fit, y_fit)
     s30 = xgb30.predict_proba(X30_test)[:, 1]
     m = evaluate_scores(y_test, s30)
@@ -224,9 +225,10 @@ def main() -> None:
 
     md = "| model | family | P | R | F1 | AP | ROC-AUC | P@100 | R@100 | time(s) |\n|---|---|---|---|---|---|---|---|---|---|\n"
     for r in table:
+        t = r.get("inference_sec", float("nan"))
         md += (f"| {r['model']} | {r['family']} | {r['precision']:.3f} | {r['recall']:.3f} "
                f"| {r['f1']:.3f} | {r['avg_precision']:.3f} | {r['roc_auc']:.3f} "
-               f"| {r['precision@100']:.3f} | {r['recall@100']:.3f} | {r['inference_sec']:.3f} |\n")
+               f"| {r['precision@100']:.3f} | {r['recall@100']:.3f} | {t:.3f} |\n")
     (METRICS_DIR / "comparison.md").write_text(md)
     print(f"\ncomparison -> {METRICS_DIR / 'comparison.csv'}")
 
