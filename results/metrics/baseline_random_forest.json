@@ -1,0 +1,22 @@
+{
+  "model": "random_forest",
+  "family": "tabular",
+  "split": "temporal",
+  "val": {
+    "precision": 0.9875444839857651,
+    "recall": 0.9390862944162437,
+    "f1": 0.9627059843885516,
+    "avg_precision": 0.9903680059454315,
+    "roc_auc": 0.9968735921320376,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 1.0,
+    "recall@50": 0.08460236886632826,
+    "precision@100": 1.0,
+    "recall@100": 0.1692047377326565,
+    "precision@250": 1.0,
+    "recall@250": 0.4230118443316413,
+    "inference_sec": 0.205
+  },
+  "params": "defaults"
+}

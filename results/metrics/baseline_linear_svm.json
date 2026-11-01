@@ -1,0 +1,22 @@
+{
+  "model": "linear_svm",
+  "family": "tabular",
+  "split": "temporal",
+  "val": {
+    "precision": 0.16828018223234625,
+    "recall": 1.0,
+    "f1": 0.2880818912990495,
+    "avg_precision": 0.6646442483904922,
+    "roc_auc": 0.9462441991496912,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 0.3,
+    "recall@50": 0.025380710659898477,
+    "precision@100": 0.5,
+    "recall@100": 0.08460236886632826,
+    "precision@250": 0.732,
+    "recall@250": 0.3096446700507614,
+    "inference_sec": 0.014
+  },
+  "params": "defaults"
+}

@@ -1,0 +1,22 @@
+{
+  "model": "logistic_regression",
+  "family": "tabular",
+  "split": "temporal",
+  "val": {
+    "precision": 0.3563076923076923,
+    "recall": 0.9796954314720813,
+    "f1": 0.5225631768953068,
+    "avg_precision": 0.5859323854506565,
+    "roc_auc": 0.9080813503024491,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 0.34,
+    "recall@50": 0.028764805414551606,
+    "precision@100": 0.56,
+    "recall@100": 0.09475465313028765,
+    "precision@250": 0.72,
+    "recall@250": 0.30456852791878175,
+    "inference_sec": 0.016
+  },
+  "params": "defaults"
+}

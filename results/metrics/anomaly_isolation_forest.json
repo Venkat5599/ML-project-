@@ -1,0 +1,22 @@
+{
+  "model": "isolation_forest",
+  "family": "anomaly",
+  "split": "temporal",
+  "val": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "avg_precision": 0.10098768123552199,
+    "roc_auc": 0.1942495868323738,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 0.0,
+    "recall@50": 0.0,
+    "precision@100": 0.0,
+    "recall@100": 0.0,
+    "precision@250": 0.004,
+    "recall@250": 0.001692047377326565,
+    "inference_sec": 0.221
+  },
+  "params": "n_estimators=300, contamination=auto"
+}

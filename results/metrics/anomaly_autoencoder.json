@@ -1,0 +1,22 @@
+{
+  "model": "autoencoder",
+  "family": "anomaly",
+  "split": "temporal",
+  "val": {
+    "precision": 0.0221606648199446,
+    "recall": 0.01353637901861252,
+    "f1": 0.01680672268907563,
+    "avg_precision": 0.10586502615066543,
+    "roc_auc": 0.24428716858281474,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 0.04,
+    "recall@50": 0.00338409475465313,
+    "precision@100": 0.05,
+    "recall@100": 0.008460236886632826,
+    "precision@250": 0.024,
+    "recall@250": 0.01015228426395939,
+    "inference_sec": 0.03
+  },
+  "params": "96-48-24-48-96, 30 epochs, Adam 1e-3"
+}

@@ -1,0 +1,22 @@
+{
+  "model": "decision_tree",
+  "family": "tabular",
+  "split": "temporal",
+  "val": {
+    "precision": 0.6164817749603804,
+    "recall": 0.6582064297800339,
+    "f1": 0.6366612111292962,
+    "avg_precision": 0.46327297976360104,
+    "roc_auc": 0.7876932217346438,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 0.58,
+    "recall@50": 0.049069373942470386,
+    "precision@100": 0.67,
+    "recall@100": 0.11336717428087986,
+    "precision@250": 0.66,
+    "recall@250": 0.27918781725888325,
+    "inference_sec": 0.003
+  },
+  "params": "defaults"
+}

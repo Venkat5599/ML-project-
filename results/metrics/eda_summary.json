@@ -1,0 +1,39 @@
+{
+  "n_total": 203769,
+  "n_illicit": 4545,
+  "n_licit": 42019,
+  "n_unknown": 157205,
+  "imbalance_ratio_licit_per_illicit": 9.25,
+  "missing_values": 0,
+  "duplicate_tx_ids": 0,
+  "feature_ranges": {
+    "min": -13.09335839600819,
+    "max": 289.20438805244663
+  },
+  "n_time_steps": 49,
+  "top_separable": {
+    "local_53": 1.162,
+    "local_55": 0.997,
+    "local_89": 0.99,
+    "local_90": 0.987,
+    "local_91": 0.758,
+    "local_52": 0.749,
+    "agg_57": 0.685,
+    "local_54": 0.637,
+    "agg_21": 0.574,
+    "local_83": 0.553,
+    "agg_63": 0.551,
+    "local_85": 0.532,
+    "local_77": 0.531,
+    "local_84": 0.525,
+    "local_59": 0.52
+  },
+  "graph": {
+    "n_edges": 234355,
+    "n_nodes_in_graph": 203769,
+    "n_weak_components": 49,
+    "largest_component": 7880,
+    "max_in_degree": 284,
+    "max_out_degree": 472
+  }
+}

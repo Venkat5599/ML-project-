@@ -1,0 +1,22 @@
+{
+  "model": "xgboost",
+  "family": "tabular",
+  "split": "temporal",
+  "val": {
+    "precision": 0.9724770642201835,
+    "recall": 0.8967851099830795,
+    "f1": 0.9330985915492958,
+    "avg_precision": 0.9856050166957973,
+    "roc_auc": 0.997000119288761,
+    "n_eval": 3513,
+    "n_positive": 591,
+    "precision@50": 1.0,
+    "recall@50": 0.08460236886632826,
+    "precision@100": 1.0,
+    "recall@100": 0.1692047377326565,
+    "precision@250": 0.996,
+    "recall@250": 0.4213197969543147,
+    "inference_sec": 0.018
+  },
+  "params": "defaults"
+}
