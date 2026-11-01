@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api, AlertRow, Summary } from "@/lib/api";
 
 const LABEL_STYLE: Record<string, string> = {
@@ -9,6 +10,8 @@ const LABEL_STYLE: Record<string, string> = {
   licit: "text-sky-400",
   unknown: "text-zinc-500",
 };
+
+const PAGE_SIZE = 100;
 
 function fmt(n: number | null | undefined, d = 3) {
   return n == null ? "-" : n.toFixed(d);
@@ -31,13 +34,33 @@ function ScoreCell({ v }: { v: number }) {
   );
 }
 
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 12 }).map((_, i) => (
+        <tr key={i} className="border-t border-zinc-800/50">
+          {["w-24", "w-8", "w-14", "w-16", "w-12", "w-12"].map((w, j) => (
+            <td key={j} className="px-3 py-2.5">
+              <div className={`h-3 animate-pulse bg-zinc-800/70 ${w}`} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function AlertCenter() {
+  const router = useRouter();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<AlertRow[]>([]);
   const [total, setTotal] = useState(0);
   const [minScore, setMinScore] = useState(0.5);
   const [label, setLabel] = useState("all");
   const [steps, setSteps] = useState<[number, number]>([35, 49]);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,27 +68,52 @@ export default function AlertCenter() {
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     api
-      .alerts({ min_score: minScore, label, step_min: steps[0], step_max: steps[1], limit: 500 })
+      .alerts({
+        min_score: minScore,
+        label,
+        step_min: steps[0],
+        step_max: steps[1],
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      })
       .then((r) => {
         setRows(r.rows);
         setTotal(r.total);
         setErr(null);
       })
-      .catch((e) => setErr(String(e)));
-  }, [minScore, label, steps]);
+      .catch((e) => setErr(String(e)))
+      .finally(() => setLoading(false));
+  }, [minScore, label, steps, page]);
 
+  // scores are sorted desc, so page 0 rows ARE the global top of the queue
   const top100 = useMemo(
-    () => rows.filter((r) => r.label !== "unknown").slice(0, 100),
-    [rows]
+    () => (page === 0 ? rows.filter((r) => r.label !== "unknown").slice(0, 100) : []),
+    [rows, page]
   );
-  const p100 = top100.length
+  const p100 = page === 0 && top100.length
     ? top100.filter((r) => r.label === "illicit").length / top100.length
     : null;
 
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function goSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const id = Number(search.replace(/\D/g, ""));
+    if (id) router.push(`/tx/${id}`);
+  }
+
+  function setFilter<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setPage(0);
+      setter(v);
+    };
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-6 py-5">
-      <header className="mb-5 flex items-baseline justify-between border-b border-zinc-800 pb-4">
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
           <h1 className="font-mono text-xl font-semibold tracking-tight">
             ChainSleuth <span className="text-amber-500">AML</span>
@@ -75,9 +123,20 @@ export default function AlertCenter() {
             Scores rank suspicion, not proven criminality.
           </p>
         </div>
-        <div className="font-mono text-xs text-zinc-600">
-          {summary ? `${summary.n_scored.toLocaleString()} scored` : ""}
-        </div>
+        <form onSubmit={goSearch} className="flex">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="jump to tx_id"
+            className="w-48 border border-r-0 border-zinc-700 bg-zinc-950 px-3 py-1.5 font-mono text-xs text-zinc-200 placeholder-zinc-600 outline-none focus:border-amber-600"
+          />
+          <button
+            type="submit"
+            className="border border-amber-700 bg-amber-950/40 px-3 py-1.5 font-mono text-xs text-amber-300 hover:bg-amber-950"
+          >
+            inspect
+          </button>
+        </form>
       </header>
 
       {err && (
@@ -113,7 +172,7 @@ export default function AlertCenter() {
           </span>
           <input
             type="range" min={0} max={1} step={0.05} value={minScore}
-            onChange={(e) => setMinScore(Number(e.target.value))}
+            onChange={(e) => setFilter(setMinScore)(Number(e.target.value))}
             className="w-44 accent-amber-500"
           />
         </label>
@@ -121,7 +180,7 @@ export default function AlertCenter() {
           <span className="font-mono text-[11px] text-zinc-500">LABEL</span>
           <select
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={(e) => setFilter(setLabel)(e.target.value)}
             className="border border-zinc-700 bg-zinc-950 px-2 py-1 font-mono text-xs text-zinc-200"
           >
             {["all", "illicit", "licit", "unknown"].map((l) => (
@@ -136,16 +195,39 @@ export default function AlertCenter() {
           <div className="flex items-center gap-2">
             <input
               type="range" min={35} max={49} value={steps[0]}
-              onChange={(e) => setSteps([Math.min(Number(e.target.value), steps[1]), steps[1]])}
+              onChange={(e) =>
+                setFilter(setSteps)([Math.min(Number(e.target.value), steps[1]), steps[1]])
+              }
               className="w-24 accent-zinc-500"
             />
             <input
               type="range" min={35} max={49} value={steps[1]}
-              onChange={(e) => setSteps([steps[0], Math.max(Number(e.target.value), steps[0])])}
+              onChange={(e) =>
+                setFilter(setSteps)([steps[0], Math.max(Number(e.target.value), steps[0])])
+              }
               className="w-24 accent-zinc-500"
             />
           </div>
         </label>
+        <div className="ml-auto flex items-center gap-2 font-mono text-xs text-zinc-500">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0 || loading}
+            className="border border-zinc-700 px-3 py-1 text-zinc-300 enabled:hover:border-zinc-500 disabled:opacity-30"
+          >
+            prev
+          </button>
+          <span>
+            {page + 1} / {pages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
+            disabled={page >= pages - 1 || loading}
+            className="border border-zinc-700 px-3 py-1 text-zinc-300 enabled:hover:border-zinc-500 disabled:opacity-30"
+          >
+            next
+          </button>
+        </div>
       </section>
 
       <div className="overflow-x-auto border border-zinc-800">
@@ -158,36 +240,42 @@ export default function AlertCenter() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.tx_id}
-                className="border-t border-zinc-800/50 transition-colors hover:bg-zinc-900/50"
-              >
-                <td className="px-3 py-2">
-                  <Link
-                    href={`/tx/${r.tx_id}`}
-                    className="text-zinc-200 hover:text-amber-300 hover:underline"
-                  >
-                    {r.tx_id}
-                  </Link>
-                </td>
-                <td className="px-3 py-2 text-zinc-500">{r.time_step}</td>
-                <td className={`px-3 py-2 ${LABEL_STYLE[r.label]}`}>{r.label}</td>
-                <td className="px-3 py-2"><ScoreCell v={r.score} /></td>
-                <td className="px-3 py-2 text-zinc-400">{fmt(r.xgb)}</td>
-                <td className="px-3 py-2 text-zinc-400">{fmt(r.gnn)}</td>
-              </tr>
-            ))}
+            {loading ? (
+              <SkeletonRows />
+            ) : (
+              rows.map((r) => (
+                <tr
+                  key={r.tx_id}
+                  onClick={() => router.push(`/tx/${r.tx_id}`)}
+                  className="cursor-pointer border-t border-zinc-800/50 transition-colors hover:bg-zinc-900/50"
+                >
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/tx/${r.tx_id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-zinc-200 hover:text-amber-300 hover:underline"
+                    >
+                      {r.tx_id}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2 text-zinc-500">{r.time_step}</td>
+                  <td className={`px-3 py-2 ${LABEL_STYLE[r.label]}`}>{r.label}</td>
+                  <td className="px-3 py-2"><ScoreCell v={r.score} /></td>
+                  <td className="px-3 py-2 text-zinc-400">{fmt(r.xgb)}</td>
+                  <td className="px-3 py-2 text-zinc-400">{fmt(r.gnn)}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-        {rows.length === 0 && !err && (
+        {!loading && rows.length === 0 && !err && (
           <div className="px-4 py-10 text-center text-sm text-zinc-600">
             no alerts match filters
           </div>
         )}
       </div>
       <p className="mt-2 font-mono text-[11px] text-zinc-600">
-        {rows.length.toLocaleString()} of {total.toLocaleString()} alerts shown. click a tx_id to open the investigation view.
+        {total.toLocaleString()} alerts match. click a row to open the investigation view.
       </p>
     </main>
   );
