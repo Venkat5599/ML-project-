@@ -24,6 +24,7 @@ export type GraphNode = {
   is_center: boolean;
   hop: number;
   degree: number;
+  time_step: number;
   score: number | null;
 };
 

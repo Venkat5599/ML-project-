@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, Contribution, GraphData, TxDetail } from "@/lib/api";
 import { ScoreBars, ShapChart } from "@/components/Charts";
@@ -29,12 +29,15 @@ export default function TxPage() {
 
 function TxView() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const txId = Number(id);
   const [tx, setTx] = useState<TxDetail | null>(null);
   const [contrib, setContrib] = useState<Contribution[]>([]);
   const [graph, setGraph] = useState<GraphData | null>(null);
   const [hops, setHops] = useState(1);
   const [panel, setPanel] = useState<"scores" | "shap">("scores");
+  const [showFlows, setShowFlows] = useState(true);
+  const [jump, setJump] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -66,6 +69,29 @@ function TxView() {
   const neighbors = graph
     ? [...graph.nodes].filter((n) => !n.is_center).sort((a, b) => b.degree - a.degree).slice(0, 8)
     : [];
+
+  // flat flow list for the metasleuth-style bottom table
+  const nodeById = new Map(graph?.nodes.map((n) => [n.id, n]) ?? []);
+  const flows = graph
+    ? graph.links
+        .map((l) => ({
+          from: nodeById.get(typeof l.source === "number" ? l.source : l.source.id)!,
+          to: nodeById.get(typeof l.target === "number" ? l.target : l.target.id)!,
+        }))
+        .filter((f) => f.from && f.to)
+        // flows touching the selected tx first
+        .sort(
+          (a, b) =>
+            Number(!(a.from.is_center || a.to.is_center)) -
+            Number(!(b.from.is_center || b.to.is_center))
+        )
+    : [];
+
+  function goJump(e: React.FormEvent) {
+    e.preventDefault();
+    const v = Number(jump.replace(/\D/g, ""));
+    if (v) router.push(`/tx/${v}`);
+  }
 
   return (
     <main className="flex h-[100dvh] flex-col bg-zinc-950">
@@ -223,6 +249,26 @@ function TxView() {
                 {graph.nodes.length} nodes / {graph.links.length} flows
               </span>
             )}
+            <form onSubmit={goJump} className="flex">
+              <input
+                value={jump}
+                onChange={(e) => setJump(e.target.value)}
+                placeholder="add tx"
+                className="w-24 border border-r-0 border-zinc-700 bg-zinc-950 px-2 py-0.5 font-mono text-[11px] text-zinc-300 placeholder-zinc-600 outline-none focus:border-amber-600"
+              />
+              <button
+                type="submit"
+                className="border border-amber-700 bg-amber-950/40 px-2 py-0.5 font-mono text-[11px] text-amber-300 hover:bg-amber-950"
+              >
+                +
+              </button>
+            </form>
+            <button
+              onClick={() => setShowFlows((v) => !v)}
+              className="border border-zinc-700 px-2 py-0.5 font-mono text-[11px] text-zinc-400 hover:text-zinc-200"
+            >
+              {showFlows ? "hide flows" : "flows"}
+            </button>
             <div className="ml-auto flex gap-3 font-mono text-[10px] text-zinc-500">
               <span className="flex items-center gap-1.5">
                 <i className="inline-block h-2 w-2 rounded-[3px] border border-red-400 bg-red-950/60" />
@@ -252,9 +298,62 @@ function TxView() {
               </div>
             )}
             <div className="pointer-events-none absolute bottom-2 left-3 font-mono text-[10px] text-zinc-600">
-              click a node to pivot. arrows show fund direction. scroll to zoom, drag to pan.
+              left = incoming sources / right = outgoing destinations. click a
+              node to pivot. scroll to zoom, drag to pan.
             </div>
           </div>
+
+          {/* flows table - metasleuth source/destination list */}
+          {showFlows && graph && flows.length > 0 && (
+            <div className="max-h-44 shrink-0 overflow-y-auto border-t border-zinc-800">
+              <table className="w-full font-mono text-[11px]">
+                <thead className="sticky top-0 bg-zinc-900 text-[10px] uppercase tracking-wider text-zinc-500">
+                  <tr>
+                    {["source tx", "label", "", "destination tx", "label", "step", "status"].map(
+                      (h, i) => (
+                        <th key={i} className="px-3 py-1.5 text-left font-medium">{h}</th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {flows.map((f, i) => (
+                    <tr key={i} className="border-t border-zinc-800/50 hover:bg-zinc-900/40">
+                      <td className="px-3 py-1">
+                        <Link
+                          href={`/tx/${f.from.id}`}
+                          className={f.from.is_center ? "text-amber-300" : "text-zinc-300 hover:text-amber-300"}
+                        >
+                          {f.from.id}
+                        </Link>
+                      </td>
+                      <td className={`px-3 py-1 ${f.from.label === "illicit" ? "text-red-400" : f.from.label === "licit" ? "text-sky-400" : "text-zinc-600"}`}>
+                        {f.from.label}
+                      </td>
+                      <td className="px-1 py-1 text-zinc-600">{"->"}</td>
+                      <td className="px-3 py-1">
+                        <Link
+                          href={`/tx/${f.to.id}`}
+                          className={f.to.is_center ? "text-amber-300" : "text-zinc-300 hover:text-amber-300"}
+                        >
+                          {f.to.id}
+                        </Link>
+                      </td>
+                      <td className={`px-3 py-1 ${f.to.label === "illicit" ? "text-red-400" : f.to.label === "licit" ? "text-sky-400" : "text-zinc-600"}`}>
+                        {f.to.label}
+                      </td>
+                      <td className="px-3 py-1 text-zinc-600">
+                        {f.from.time_step}-{f.to.time_step}
+                      </td>
+                      <td className="px-3 py-1 text-zinc-500">
+                        {f.to.is_center ? "in" : f.from.is_center ? "out" : "inter"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </main>

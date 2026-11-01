@@ -107,11 +107,14 @@ def fit_ae(X_licit):
     return ae, scorer
 
 
-def fit_gnn(data, mask, eval_mask, y_eval):
-    model, _ = train_gnn(data, mask, eval_mask, y_eval, GNN_EPOCHS,
-                         hidden=256, lr=0.005, dropout=0.3,
-                         patience=GNN_PATIENCE, device=DEVICE, verbose=False)
-    return model
+def fit_gnn(data, mask, eval_mask, y_eval, epochs=None):
+    """epochs=None -> early-stop on eval_mask; epochs=N -> fixed retrain
+    (used for the train+val refit so the test window is never consulted)."""
+    model, _, best_epoch = train_gnn(
+        data, mask, eval_mask, y_eval, epochs or GNN_EPOCHS,
+        hidden=256, lr=0.005, dropout=0.3,
+        patience=GNN_PATIENCE, device=DEVICE, verbose=False)
+    return model, best_epoch
 
 
 # ------------------------------------------------------------------- helpers
@@ -155,7 +158,7 @@ def main() -> None:
     _, s = fit_iso(Xl_tr); comps_val["iso"] = s(X_v)
     _, s = fit_ae(Xl_tr); comps_val["ae"] = s(X_v)
 
-    gnn_v = fit_gnn(data, data.train_mask, data.val_mask, y_v)
+    gnn_v, gnn_best_epoch = fit_gnn(data, data.train_mask, data.val_mask, y_v)
     comps_val["gnn"] = gnn_scores(gnn_v, data.to(DEVICE), DEVICE)[data.val_mask.cpu().numpy()]
 
     # ================= stage 2: tune ensemble on val ==========================
@@ -192,7 +195,8 @@ def main() -> None:
     _, scorers["ae"] = fit_ae(Xl_f); comps_test["ae"] = scorers["ae"](X_t)
 
     fit_mask = data.train_mask | data.val_mask
-    gnn_t = fit_gnn(data, fit_mask, data.test_mask, y_t)
+    # fixed epoch count from the val early-stop; test never used for selection
+    gnn_t, _ = fit_gnn(data, fit_mask, None, None, epochs=gnn_best_epoch)
     all_gnn = gnn_scores(gnn_t, data.to(DEVICE), DEVICE)
     comps_test["gnn"] = all_gnn[data.test_mask.cpu().numpy()]
 

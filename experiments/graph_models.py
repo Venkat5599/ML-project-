@@ -43,7 +43,13 @@ class GraphSAGE(nn.Module):
 def train_gnn(data, train_mask, eval_mask, y_eval, epochs: int, hidden: int,
               lr: float, dropout: float, patience: int, device: str,
               verbose: bool = True):
-    """Train GraphSAGE with class-weighted CE; early-stop on eval-mask AP."""
+    """Train GraphSAGE with class-weighted CE.
+
+    eval_mask=None -> train for exactly `epochs` epochs (used for the final
+    train+val refit, where the epoch count is fixed from the validation run
+    and the test window is never consulted for early stopping).
+    Returns (model, best_eval_ap, best_epoch).
+    """
     torch.manual_seed(SEED)
     model = GraphSAGE(data.num_features, hidden, dropout).to(device)
     data = data.to(device)
@@ -61,6 +67,12 @@ def train_gnn(data, train_mask, eval_mask, y_eval, epochs: int, hidden: int,
         loss = loss_fn(out[train_mask], data.y[train_mask])
         loss.backward()
         opt.step()
+
+        if eval_mask is None:
+            if epoch == epochs:
+                best_state = copy.deepcopy(model.state_dict())
+                best_epoch = epoch
+            continue
 
         model.eval()
         with torch.no_grad():
@@ -80,7 +92,7 @@ def train_gnn(data, train_mask, eval_mask, y_eval, epochs: int, hidden: int,
             break
 
     model.load_state_dict(best_state)
-    return model, best_ap
+    return model, best_ap, best_epoch
 
 
 def gnn_scores(model, data, device) -> np.ndarray:
@@ -106,9 +118,10 @@ def main() -> None:
     # note: Data.to(device) is in-place; masks live on `device` after training
     y_val = data.y[data.val_mask].cpu().numpy()
     print("[phase A] train-mask = steps 1-29")
-    model, val_ap = train_gnn(data, data.train_mask, data.val_mask, y_val,
-                              args.epochs, args.hidden, args.lr, args.dropout,
-                              args.patience, device)
+    model, val_ap, best_epoch = train_gnn(
+        data, data.train_mask, data.val_mask, y_val,
+        args.epochs, args.hidden, args.lr, args.dropout,
+        args.patience, device)
     scores_val = gnn_scores(model, data, device)[data.val_mask.cpu().numpy()]
     m = evaluate_scores(y_val, scores_val)
     save_metrics("gnn_graphsage", {"model": "graphsage", "family": "graph",
@@ -119,12 +132,14 @@ def main() -> None:
     print(f"  val AP={m['avg_precision']:.4f} P@100={m['precision@100']:.3f}")
 
     # --- phase B: retrain on train+val mask, eval on test ---------------------
+    # fixed epoch count from validation early-stopping; test is NOT used for
+    # model selection (leakage-safe retrain protocol)
     y_test = data.y[data.test_mask].cpu().numpy()
     fit_mask = data.train_mask | data.val_mask
-    print("[phase B] retrain on steps 1-34")
-    model, _ = train_gnn(data, fit_mask, data.test_mask, y_test,
-                         args.epochs, args.hidden, args.lr, args.dropout,
-                         args.patience, device)
+    print(f"[phase B] retrain on steps 1-34 for {best_epoch} epochs")
+    model, _, _ = train_gnn(data, fit_mask, None, None,
+                            best_epoch, args.hidden, args.lr, args.dropout,
+                            args.patience, device)
     all_scores = gnn_scores(model, data, device)
     m = evaluate_scores(y_test, all_scores[data.test_mask.cpu().numpy()])
     save_metrics("final_gnn_graphsage", {"model": "graphsage", "family": "graph",

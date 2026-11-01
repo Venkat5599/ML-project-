@@ -202,6 +202,7 @@ def graph(tx_id: int, hops: int = Query(1, ge=1, le=2), max_nodes: int = 120):
         for a in nodes for b in out_adj.get(a, ())
         if b in node_set
     ]
+    steps = st["feat"]["time_step"]
     return {
         "nodes": [
             {
@@ -210,6 +211,7 @@ def graph(tx_id: int, hops: int = Query(1, ge=1, le=2), max_nodes: int = 120):
                 "is_center": n == tx_id,
                 "hop": signed[n],
                 "degree": len(out_adj.get(n, ())) + len(in_adj.get(n, ())),
+                "time_step": int(steps.get(n, -1)),
                 "score": float(score_map[n]) if n in score_map.index
                          and pd.notna(score_map[n]) else None,
             }

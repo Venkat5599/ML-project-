@@ -29,9 +29,32 @@ cd frontend && bun install && bun dev --port 3001     # Next.js frontend -> http
 Train on time steps 1-29, tune on 30-34, evaluate once on 35-49. Unknown labels
 are never used as ground truth. Results are suspicion rankings, not criminality.
 
-## Layout
+## Codebase map
 
-- `chainsleuth/` - config, data loading, splits, metrics, experiment helpers
-- `experiments/` - numbered pipeline stages (see docstrings)
-- `results/figures/`, `results/metrics/` - report-ready outputs
-- `tests/` - unit tests for split/metrics correctness
+Every file, in the order data flows through it:
+
+| file / dir | what it does |
+|---|---|
+| `chainsleuth/config.py` | paths, seeds, split constants (train 1-29 / val 30-34 / test 35-49) |
+| `chainsleuth/data.py` | loads raw Elliptic CSVs, builds the joined dataset parquet |
+| `chainsleuth/splits.py` | temporal masks + the feature-column list (165 features) |
+| `chainsleuth/metrics.py` | evaluation: F1, AP, ROC-AUC, Precision/Recall@K |
+| `chainsleuth/graph.py` | builds the PyG `Data` object (nodes, edges, masks) for the GNN |
+| `experiments/download_data.py` | downloads the dataset (HuggingFace mirror, no login needed) |
+| `experiments/eda.py` | exploratory analysis -> `results/figures/` |
+| `experiments/baselines.py` | quick untuned model comparison |
+| `experiments/tune.py` | Optuna hyperparameter tuning (validation AP objective) |
+| `experiments/evaluate.py` | retrains tuned models once, writes test metrics + ablations |
+| `experiments/anomaly.py` | Isolation Forest + autoencoder (fit on licit only) |
+| `experiments/graph_features.py` | NetworkX topology features (degree, PageRank, ...) |
+| `experiments/graph_models.py` | GraphSAGE on GPU: val early-stop, fixed-epoch refit |
+| `experiments/hybrid.py` | weight-tuned + stacked + calibrated ensemble |
+| `backend/main.py` | FastAPI: alerts, tx details, SHAP, directed flow graph |
+| `frontend/` | Next.js app: alert table + investigation canvas |
+| `run_app.bat` | one-click local launch (backend + frontend) |
+| `report/REPORT.md` | the evaluation report (all numbers generated) |
+| `tests/` | leakage + metrics unit tests (`pytest tests/`) |
+
+Rule of thumb: scripts read from `data/processed/` and write to
+`results/metrics/` + `results/figures/`. Nothing touches the raw CSVs except
+`download_data` and `data.py`.

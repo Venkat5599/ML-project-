@@ -9,11 +9,11 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
 
-// label -> [border/text color, chip background]
-const CHIP: Record<string, [string, string]> = {
-  illicit: ["#f87171", "rgba(127,29,29,0.55)"],
-  licit: ["#38bdf8", "rgba(12,74,110,0.55)"],
-  unknown: ["#a1a1aa", "rgba(39,39,42,0.7)"],
+// label -> [border/text color, chip background, glyph shown inside chip]
+const CHIP: Record<string, [string, string, string]> = {
+  illicit: ["#f87171", "rgba(127,29,29,0.55)", "!"],
+  licit: ["#38bdf8", "rgba(12,74,110,0.55)", "✓"],
+  unknown: ["#a1a1aa", "rgba(39,39,42,0.7)", "?"],
 };
 const ACCENT = "#f59e0b";
 const ACCENT_BG = "rgba(120,53,15,0.75)";
@@ -46,6 +46,7 @@ function chip(ctx: CanvasRenderingContext2D, x: number, y: number,
 export default function NetworkGraph({ data }: { data: GraphData }) {
   const router = useRouter();
   const wrap = useRef<HTMLDivElement>(null);
+  const fg = useRef<{ zoom: (n: number, ms?: number) => void; zoomToFit: (ms?: number, px?: number) => void } | null>(null);
   const [size, setSize] = useState({ w: 900, h: 560 });
   const [hoverId, setHoverId] = useState<number | null>(null);
 
@@ -100,6 +101,7 @@ export default function NetworkGraph({ data }: { data: GraphData }) {
   return (
     <div ref={wrap} className="absolute inset-0" style={{ background: BG }}>
       <ForceGraph2D
+        ref={fg as never}
         graphData={laid as never}
         width={size.w}
         height={Math.max(400, size.h)}
@@ -111,10 +113,12 @@ export default function NetworkGraph({ data }: { data: GraphData }) {
           const dimmed = dim(n.id);
           ctx.globalAlpha = dimmed ? 0.12 : 1;
 
-          const [line, bg] = n.is_center ? [ACCENT, ACCENT_BG] : CHIP[n.label] ?? CHIP.unknown;
+          const [line, bg, glyph] = n.is_center
+            ? [ACCENT, ACCENT_BG, ""]
+            : CHIP[n.label] ?? CHIP.unknown;
           const fs = 11 / Math.pow(scale, 0.35);
           ctx.font = `${n.is_center ? "600 " : ""}${fs}px "JetBrains Mono", monospace`;
-          const text = n.is_center ? String(n.id) : shortId(n.id);
+          const text = `${glyph ? glyph + " " : ""}${n.is_center ? String(n.id) : shortId(n.id)}`;
           const tw = ctx.measureText(text).width;
           const padX = n.is_center ? 14 : 10;
           const chipW = tw + padX * 2;
@@ -180,6 +184,27 @@ export default function NetworkGraph({ data }: { data: GraphData }) {
         onNodeHover={(n: object | null) => setHoverId(n ? (n as FgNode).id : null)}
         onNodeClick={(n: object) => router.push(`/tx/${(n as FgNode).id}`)}
       />
+      {/* zoom controls - metasleuth bottom-right cluster */}
+      <div className="absolute bottom-3 right-3 flex flex-col font-mono text-sm">
+        <button
+          onClick={() => fg.current?.zoom(1.4, 200)}
+          className="border border-b-0 border-zinc-700 bg-zinc-900/90 px-2.5 py-1 text-zinc-300 hover:bg-zinc-800"
+        >
+          +
+        </button>
+        <button
+          onClick={() => fg.current?.zoom(0.7, 200)}
+          className="border border-zinc-700 bg-zinc-900/90 px-2.5 py-1 text-zinc-300 hover:bg-zinc-800"
+        >
+          -
+        </button>
+        <button
+          onClick={() => fg.current?.zoomToFit(300, 40)}
+          className="mt-1 border border-zinc-700 bg-zinc-900/90 px-2.5 py-1 text-[10px] text-zinc-400 hover:bg-zinc-800"
+        >
+          fit
+        </button>
+      </div>
     </div>
   );
 }
