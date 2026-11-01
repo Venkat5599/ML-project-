@@ -16,6 +16,6 @@
     "recall@100": 0.0,
     "precision@250": 0.0,
     "recall@250": 0.0,
-    "inference_sec": 0.29
+    "inference_sec": 0.279
   }
 }

@@ -3,11 +3,11 @@
   "family": "tabular",
   "split": "temporal",
   "test": {
-    "precision": 0.8661588683351469,
-    "recall": 0.7349953831948292,
-    "f1": 0.7952047952047953,
-    "avg_precision": 0.802820110097521,
-    "roc_auc": 0.9336687396231476,
+    "precision": 0.875,
+    "recall": 0.7303785780240074,
+    "f1": 0.7961751383995974,
+    "avg_precision": 0.8009547477501331,
+    "roc_auc": 0.9306846549978522,
     "n_eval": 16670,
     "n_positive": 1083,
     "precision@50": 1.0,
@@ -16,6 +16,6 @@
     "recall@100": 0.09233610341643583,
     "precision@250": 1.0,
     "recall@250": 0.23084025854108955,
-    "inference_sec": 0.093
+    "inference_sec": 0.227
   }
 }
