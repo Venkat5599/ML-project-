@@ -28,7 +28,9 @@ Framing rules (important for the report):
 - Python 3.11, pandas, numpy, scikit-learn, XGBoost
 - PyTorch (autoencoder; PyG later for GraphSAGE)
 - Optuna (tuning), SHAP (explainability), NetworkX (graph EDA)
-- matplotlib/seaborn (figures), Streamlit + Plotly (dashboard, later phase)
+- matplotlib/seaborn (figures)
+- FastAPI + Next.js (local investigation app in `backend/` + `frontend/`)
+- Next.js static site and investigation console (`website/`)
 - Parquet via pyarrow for processed data cache
 
 ## Commands
