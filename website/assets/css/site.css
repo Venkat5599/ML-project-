@@ -1,0 +1,70 @@
+/* ChainSleuth site additions: reveal states, menus, project-specific pieces. */
+
+/* reveal on view: hidden state only exists when JS is running */
+.js [data-reveal]:not(.is-in) { opacity: 0; translate: 0 0.5rem; }
+@media (prefers-reduced-motion: reduce) { .js [data-reveal]:not(.is-in) { opacity: 1; translate: none; } }
+@media print { .js [data-reveal] { opacity: 1 !important; translate: none !important; } }
+
+/* inactive tab panels */
+[role="tabpanel"][hidden] { display: none !important; }
+
+/* header "More" popover */
+[data-menu] { position: relative; }
+[data-menu-pop] {
+  position: absolute; top: calc(100% + 10px); left: 50%; z-index: 60;
+  min-width: 15rem; padding: 0.5rem;
+  translate: -50% -4px; opacity: 0; pointer-events: none;
+  border: 1px solid var(--color-slate-600, #2a2d3d); border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--color-slate-900, #0f111a) 94%, transparent);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  transition: opacity 150ms ease-out, translate 150ms ease-out;
+}
+[data-menu-pop][data-state="open"] { opacity: 1; translate: -50% 0; pointer-events: auto; }
+[data-menu] button[data-state="open"] svg { rotate: 180deg; }
+[data-menu-pop] a {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 0.55rem 0.75rem; border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.86); font-size: 0.875rem; font-weight: 300; line-height: 1.25rem;
+}
+[data-menu-pop] a small { color: var(--color-slate-200, #9aa0b4); font-size: 0.75rem; font-weight: 200; }
+[data-menu-pop] a:hover, [data-menu-pop] a:focus-visible { background: rgba(255, 255, 255, 0.06); color: #fff; outline: none; }
+
+/* mobile menu sheet */
+[data-mobile-panel] {
+  position: fixed; inset: 3.375rem 0 0 0; z-index: 70;
+  display: flex; flex-direction: column; gap: 0.25rem; padding: 1rem 1rem 2rem;
+  background: var(--color-slate-950, #0b0c12);
+  opacity: 0; pointer-events: none; translate: 0 -8px;
+  transition: opacity 180ms ease-out, translate 180ms ease-out;
+  overflow-y: auto;
+}
+[data-mobile-panel][data-state="open"] { opacity: 1; pointer-events: auto; translate: 0 0; }
+[data-mobile-panel] a {
+  display: block; padding: 0.85rem 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.88); font-size: 1rem; font-weight: 300;
+}
+[data-mobile-panel] a:last-child { border-bottom: 0; }
+.menu-open, .menu-open body { overflow: hidden; }
+
+/* inline mark/wordmark svgs inherit the slot's size */
+svg.cs-mark { display: block; width: 100%; height: 100%; color: #fff; }
+
+/* method wordmarks in the pipeline strip */
+.cs-term {
+  display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.78); font-size: 19px; line-height: 1; letter-spacing: -0.01em;
+}
+.cs-term.is-mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: 16px; letter-spacing: 0; }
+.cs-term.is-heavy { font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase; font-size: 16px; }
+.cs-term.is-light { font-weight: 200; font-size: 21px; }
+
+/* model monograms in the coverage card */
+.cs-mono-badge {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 9999px;
+  font-size: 10px; font-weight: 500; letter-spacing: 0.02em; color: #0b0c12;
+}
+
+/* CTA action card */
+.cs-cta-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }

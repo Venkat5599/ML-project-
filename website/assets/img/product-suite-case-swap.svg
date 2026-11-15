@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="19.1131" height="19.1131" viewBox="0 0 19.1131 19.1131" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="swap_vert">
+<mask id="mask0_0_37" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
+<rect id="Bounding box" x="6.73916e-05" y="-7.54567e-05" width="19.1131" height="19.1131" fill="#D9D9D9" style="fill:#D9D9D9;fill:color(display-p3 0.8510 0.8510 0.8510);fill-opacity:1;"/>
+</mask>
+<g mask="url(#mask0_0_37)">
+<path id="swap_vert_2" d="M6.6932 10.076V4.27772L4.43566 6.53526L3.58413 5.69588L7.29029 1.98972L10.9966 5.69588L10.1451 6.53526L7.88757 4.27772V10.076H6.6932ZM11.8159 17.1209L8.10976 13.4148L8.96129 12.5754L11.2186 14.8329V9.0347H12.4132V14.8329L14.6707 12.5754L15.5221 13.4148L11.8159 17.1209Z" fill="#6C7284" style="fill:#6C7284;fill:color(display-p3 0.4235 0.4471 0.5176);fill-opacity:1;"/>
+</g>
+</g>
+</svg>

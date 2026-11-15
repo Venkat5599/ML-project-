@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="19.1131" height="19.1131" viewBox="0 0 19.1131 19.1131" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="flowchart">
+<mask id="mask0_0_26" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
+<rect id="Bounding box" x="9.14502e-05" y="-7.54567e-05" width="19.1131" height="19.1131" fill="#D9D9D9" style="fill:#D9D9D9;fill:color(display-p3 0.8510 0.8510 0.8510);fill-opacity:1;"/>
+</mask>
+<g mask="url(#mask0_0_26)">
+<path id="flowchart_2" d="M12.0523 15.5293V13.9901H8.9586V10.1537H7.05186V11.6852H1.99027V7.41996H7.05186V8.95916H8.9586V5.11503H12.0523V3.57603H17.1215V7.84881H12.0523V6.3096H10.1532V12.7955H12.0523V11.2641H17.1215V15.5293H12.0523ZM13.2467 14.3347H15.9269V12.4587H13.2467V14.3347ZM3.18484 10.4906H5.85729V8.61453H3.18484V10.4906ZM13.2467 6.65424H15.9269V4.7706H13.2467V6.65424Z" fill="#6C7284" style="fill:#6C7284;fill:color(display-p3 0.4235 0.4471 0.5176);fill-opacity:1;"/>
+</g>
+</g>
+</svg>
