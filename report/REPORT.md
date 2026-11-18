@@ -167,7 +167,11 @@ the five component scores per alert, and that alert's SHAP reasons and flow
 neighbourhood. Analysts can assign, clear and escalate alerts into cases, and
 can leave notes. These actions persist in a small SQLite store
 (`backend/workflow.py`) that is separate from the read-only model scores, so
-review work never changes what the models output. The model-comparison and
+review work never changes what the models output. A scoring page runs the
+saved XGBoost and random-forest models on any transaction id or on an uploaded
+CSV of feature rows, with SHAP reasons per row. It marks a score as in-sample
+when the row is labelled and from steps 1–34, because the saved models were fit
+on exactly those rows. The model-comparison and
 time-step pages are generated from `results/metrics` by
 `experiments/export_site_data.py` rather than typed by hand.
 
