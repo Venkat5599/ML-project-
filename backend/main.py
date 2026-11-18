@@ -7,6 +7,7 @@ Run from project root:  uvicorn backend.main:app --reload --port 8000
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -26,9 +27,19 @@ from chainsleuth.splits import feature_cols
 LABEL_MAP = {1: "illicit", 0: "licit", -1: "unknown"}
 
 app = FastAPI(title="ChainSleuth AML", version="0.1.0")
+# frontend/ dev server runs on 3001, website/ console on 4430. Override with a
+# comma-separated CHAINSLEUTH_ORIGINS when serving from somewhere else.
+DEFAULT_ORIGINS = [
+    f"http://{host}:{port}"
+    for port in (3000, 3001, 4430)
+    for host in ("localhost", "127.0.0.1")
+]
+ORIGINS = [o.strip() for o in os.environ.get("CHAINSLEUTH_ORIGINS", "").split(",") if o.strip()] \
+    or DEFAULT_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
