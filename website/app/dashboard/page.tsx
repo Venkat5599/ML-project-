@@ -45,7 +45,7 @@ export default function Overview() {
           value={win ? fmtInt(win.above_threshold) : "–"}
           hint={`score ≥ ${threshold.toFixed(2)} · of ${win ? fmtInt(win.n_scored) : "–"} scored`}
         />
-        <Kpi title="Unreviewed" value={count("new")} hint={`${count("reviewing")} in review`} />
+        <Kpi title="Unreviewed" value={count("new")} hint={`${count("reviewing")} in review · top ${win?.limit ?? "–"} loaded`} />
         <Kpi title="Escalated" value={count("escalated")} hint={`${cases.filter((c) => c.status !== "closed").length} open cases`} />
         <Kpi title="Cleared" value={count("cleared")} hint="false positives" />
       </div>
