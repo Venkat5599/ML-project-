@@ -17,12 +17,14 @@ import joblib
 import networkx as nx
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from chainsleuth.config import DATA_PROCESSED, MODELS_DIR
 from chainsleuth.data import load_dataset, load_raw
 from chainsleuth.splits import feature_cols
+
+from backend import workflow as wf
 
 LABEL_MAP = {1: "illicit", 0: "licit", -1: "unknown"}
 
@@ -40,7 +42,7 @@ ORIGINS = [o.strip() for o in os.environ.get("CHAINSLEUTH_ORIGINS", "").split(",
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ORIGINS,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -230,3 +232,166 @@ def graph(tx_id: int, hops: int = Query(1, ge=1, le=2), max_nodes: int = 120):
         ],
         "links": links,
     }
+
+
+# ---------------------------------------------------------------- console
+# The website console (website/app/dashboard) reads model scores from the
+# parquet above and keeps analyst actions in backend/workflow.py.
+
+def _rank_score(s: pd.DataFrame) -> pd.Series:
+    return s["score_hybrid_calibrated"].fillna(s["score_hybrid"])
+
+
+def _opt(v) -> float | None:
+    return None if v is None or pd.isna(v) else round(float(v), 4)
+
+
+def queue_frame() -> pd.DataFrame:
+    """Test-window scores with display columns, cached after first build.
+
+    Autoencoder error and isolation-forest score are unbounded, so the console
+    shows their percentile within the test window instead of the raw value.
+    """
+    st = state()
+    if "queue" not in st:
+        s = st["scores"].copy()
+        s["hybrid"] = _rank_score(s)
+        for k in ("ae", "iso"):
+            col = f"score_{k}"
+            s[f"{k}_pct"] = s[col].rank(pct=True) if col in s else np.nan
+        s["in_deg"] = s["tx_id"].map(lambda n: len(st["in_adj"].get(int(n), ())))
+        s["out_deg"] = s["tx_id"].map(lambda n: len(st["out_adj"].get(int(n), ())))
+        st["queue"] = s.sort_values("hybrid", ascending=False).reset_index(drop=True)
+    return st["queue"]
+
+
+def _alert_rows(frame: pd.DataFrame, states: dict[int, dict]) -> list[dict]:
+    rows = []
+    for r in frame.itertuples(index=False):
+        tx = int(r.tx_id)
+        ws = states.get(tx, {})
+        rows.append({
+            "id": tx,
+            "step": int(r.time_step),
+            "label": LABEL_MAP[int(r.label)],
+            "hybrid": _opt(r.hybrid),
+            "xgb": _opt(getattr(r, "score_xgb", None)),
+            "gnn": _opt(getattr(r, "score_gnn", None)),
+            "rf": _opt(getattr(r, "score_rf", None)),
+            "ae": _opt(r.ae_pct),
+            "iso": _opt(r.iso_pct),
+            "inDeg": int(r.in_deg),
+            "outDeg": int(r.out_deg),
+            "status": ws.get("status", "new"),
+            "assignee": ws.get("assignee"),
+            "caseId": ws.get("caseId"),
+            "notes": ws.get("notes", []),
+        })
+    return rows
+
+
+def snapshot(con, limit: int) -> dict:
+    q = queue_frame()
+    touched = wf.touched_tx_ids(con)
+    frame = pd.concat([q.head(limit), q[q["tx_id"].isin(touched)]]).drop_duplicates("tx_id")
+    frame = frame.sort_values("hybrid", ascending=False)
+    return {
+        "alerts": _alert_rows(frame, wf.alert_states(con)),
+        "cases": wf.cases(con),
+        "activity": wf.activity(con),
+        "settings": wf.settings(con),
+        "window": {
+            "n_scored": int(len(q)),
+            "steps": [int(q["time_step"].min()), int(q["time_step"].max())],
+            "limit": limit,
+        },
+    }
+
+
+QUEUE_LIMIT = 500
+
+
+def _act(fn, limit: int = QUEUE_LIMIT) -> dict:
+    """Run one workflow mutation and return the fresh snapshot (or a 400)."""
+    with wf.connect() as con:
+        try:
+            extra = fn(con)
+        except wf.WorkflowError as e:
+            raise HTTPException(400, str(e)) from e
+        out = snapshot(con, limit)
+    if isinstance(extra, dict):
+        out.update(extra)
+    return out
+
+
+def _who(con, body: dict) -> str:
+    return (body.get("who") or wf.settings(con)["analyst"]).strip() or "Analyst"
+
+
+def _ids(body: dict) -> list[int]:
+    ids = body.get("ids")
+    if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
+        raise HTTPException(422, "ids must be a list of integers")
+    return ids
+
+
+@app.get("/api/console")
+def console(limit: int = Query(QUEUE_LIMIT, ge=1, le=5000)):
+    with wf.connect() as con:
+        return snapshot(con, limit)
+
+
+@app.post("/api/console/alerts/assign")
+def console_assign(body: dict = Body(...)):
+    ids = _ids(body)
+    return _act(lambda con: wf.assign(con, ids, _who(con, body)))
+
+
+@app.post("/api/console/alerts/status")
+def console_status(body: dict = Body(...)):
+    ids = _ids(body)
+    return _act(lambda con: wf.set_status(con, ids, str(body.get("status")), _who(con, body)))
+
+
+@app.post("/api/console/alerts/escalate")
+def console_escalate(body: dict = Body(...)):
+    ids = _ids(body)
+    return _act(lambda con: {"caseId": wf.escalate(
+        con, ids, str(body.get("caseId", "new")), _who(con, body), body.get("title"))})
+
+
+@app.post("/api/console/alerts/{tx_id}/notes")
+def console_alert_note(tx_id: int, body: dict = Body(...)):
+    return _act(lambda con: wf.add_note(con, _who(con, body), str(body.get("text", "")), tx_id=tx_id))
+
+
+@app.post("/api/console/cases")
+def console_create_case(body: dict = Body(...)):
+    txs = body.get("txs") or []
+    return _act(lambda con: {"caseId": wf.create_case(
+        con, str(body.get("title", "")), _who(con, body), [int(t) for t in txs])})
+
+
+@app.post("/api/console/cases/{case_id}/status")
+def console_case_status(case_id: str, body: dict = Body(...)):
+    return _act(lambda con: wf.set_case_status(con, case_id, str(body.get("status")), _who(con, body)))
+
+
+@app.post("/api/console/cases/{case_id}/notes")
+def console_case_note(case_id: str, body: dict = Body(...)):
+    return _act(lambda con: wf.add_note(con, _who(con, body), str(body.get("text", "")), case_id=case_id))
+
+
+@app.delete("/api/console/cases/{case_id}/txs/{tx_id}")
+def console_remove_from_case(case_id: str, tx_id: int, who: str | None = None):
+    return _act(lambda con: wf.remove_from_case(con, case_id, tx_id, who or wf.settings(con)["analyst"]))
+
+
+@app.put("/api/console/settings")
+def console_settings(body: dict = Body(...)):
+    return _act(lambda con: wf.update_settings(con, body))
+
+
+@app.post("/api/console/reset")
+def console_reset():
+    return _act(wf.reset)
