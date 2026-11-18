@@ -210,10 +210,10 @@ def main() -> None:
     print("[stage 4] test evaluation")
     table = []
 
-    def report(name, scores, family="ensemble"):
+    def report(name, scores, family="ensemble", extra=None):
         m = evaluate_scores(y_t, scores)
         save_metrics(f"final_{name}", {"model": name, "family": family,
-                                       "split": "temporal", "test": m})
+                                       "split": "temporal", "test": m, **(extra or {})})
         table.append({"model": name, "family": family, **m})
         print(f"  {name:26s} AP={m['avg_precision']:.3f} P@100={m['precision@100']:.3f} "
               f"R@100={m['recall@100']:.3f} F1={m['f1']:.3f}")
@@ -224,7 +224,11 @@ def main() -> None:
     report("graphsage", comps_test["gnn"], family="graph")
     report("xgb_gnn_blend", 0.5 * norm_test["xgb"] + 0.5 * norm_test["gnn"],
            family="ensemble")
-    report("ensemble_weighted", blend(weights, norm_test))
+    # weights are tuned on val; saved so the report and console read them
+    # from metrics instead of copying numbers by hand
+    report("ensemble_weighted", blend(weights, norm_test),
+           extra={"weights": {k: float(v) for k, v in weights.items()},
+                  "val_avg_precision": float(study.best_value)})
     report("ensemble_stacked",
            meta.predict_proba(np.column_stack([norm_test[k] for k in names]))[:, 1])
 
