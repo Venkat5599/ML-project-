@@ -116,7 +116,7 @@ export function AppSidebar() {
               </div>
               <div className="grid min-w-0 leading-tight">
                 <span className="truncate text-sm">{settings.analyst}</span>
-                <span className="truncate font-mono text-[11px] text-muted-foreground">analyst · mock session</span>
+                <span className="truncate font-mono text-[11px] text-muted-foreground">analyst · local session</span>
               </div>
             </div>
           </SidebarMenuItem>

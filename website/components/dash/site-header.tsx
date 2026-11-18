@@ -20,12 +20,13 @@ const TITLES: Record<string, string> = {
   "/dashboard/steps": "Time steps",
   "/dashboard/settings": "Settings",
 };
-const REAL = new Set(["/dashboard/models", "/dashboard/steps"]);
+const STATIC = new Set(["/dashboard/models", "/dashboard/steps"]);
 
 export function SiteHeader() {
   const path = usePathname().replace(/\/$/, "");
   const router = useRouter();
   const setQuery = useDash((s) => s.setQuery);
+  const conn = useDash((s) => s.conn);
   const [q, setQ] = useState("");
 
   return (
@@ -34,13 +35,17 @@ export function SiteHeader() {
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mx-1 data-vertical:h-4 data-vertical:self-center" />
         <h1 className="truncate text-base font-normal">{TITLES[path] ?? "Console"}</h1>
-        {REAL.has(path) ? (
+        {STATIC.has(path) ? (
           <Badge variant="outline" className="hidden border-chart-2/40 text-chart-2 sm:inline-flex">
             from results/metrics
           </Badge>
+        ) : conn === "live" ? (
+          <Badge variant="outline" className="hidden border-success/40 text-success sm:inline-flex">
+            live · local backend
+          </Badge>
         ) : (
           <Badge variant="outline" className="hidden border-warning/40 text-warning sm:inline-flex">
-            Mock data
+            {conn === "loading" ? "connecting…" : "backend offline"}
           </Badge>
         )}
         <form

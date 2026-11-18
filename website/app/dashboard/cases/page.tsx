@@ -36,10 +36,15 @@ export default function CasesPage() {
           <Plus /> New case
         </Button>
       </div>
+      {!cases.length ? (
+        <p className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
+          No cases yet. Create one here, or escalate alerts from the queue into a new case.
+        </p>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {cases.map((x) => {
           const txs = x.txs.map((t) => byId.get(t)).filter(Boolean);
-          const peak = Math.max(0, ...txs.map((a) => a!.hybrid));
+          const peak = Math.max(0, ...txs.map((a) => a!.hybrid ?? 0));
           return (
             <Card key={x.id} className="cursor-pointer transition-colors hover:border-ring" onClick={() => setOpenId(x.id)}>
               <CardHeader>
@@ -78,8 +83,9 @@ export default function CasesPage() {
             <Button variant="ghost" onClick={() => setNewOpen(false)}>Cancel</Button>
             <Button
               disabled={!title.trim()}
-              onClick={() => {
-                const id = createCase(title.trim());
+              onClick={async () => {
+                const id = await createCase(title.trim());
+                if (!id) return;
                 setTitle("");
                 setNewOpen(false);
                 toast.add({ title: `${id} opened`, type: "success" });
@@ -106,13 +112,13 @@ export default function CasesPage() {
               <div className="grid gap-6 px-4 pb-6">
                 <div className="flex flex-wrap gap-2">
                   {c.status === "closed" ? (
-                    <Button size="sm" variant="secondary" onClick={() => { setCaseStatus(c.id, "open"); toast.add({ title: `${c.id} reopened`, type: "info" }); }}>Reopen</Button>
+                    <Button size="sm" variant="secondary" onClick={async () => { if (await setCaseStatus(c.id, "open")) toast.add({ title: `${c.id} reopened`, type: "info" }); }}>Reopen</Button>
                   ) : (
                     <>
                       {c.status === "open" ? (
-                        <Button size="sm" variant="secondary" onClick={() => { setCaseStatus(c.id, "in review"); toast.add({ title: `${c.id} moved to review`, type: "info" }); }}>Move to review</Button>
+                        <Button size="sm" variant="secondary" onClick={async () => { if (await setCaseStatus(c.id, "in review")) toast.add({ title: `${c.id} moved to review`, type: "info" }); }}>Move to review</Button>
                       ) : null}
-                      <Button size="sm" variant="secondary" onClick={() => { setCaseStatus(c.id, "closed"); toast.add({ title: `${c.id} closed`, type: "success" }); }}>Close case</Button>
+                      <Button size="sm" variant="secondary" onClick={async () => { if (await setCaseStatus(c.id, "closed")) toast.add({ title: `${c.id} closed`, type: "success" }); }}>Close case</Button>
                     </>
                   )}
                 </div>
@@ -127,7 +133,7 @@ export default function CasesPage() {
                             <button className="font-mono text-sm hover:underline" onClick={() => setAlertId(t)}>{t}</button>
                             {a ? <LabelBadge label={a.label} /> : null}
                             {a ? <ScoreBar value={a.hybrid} className="flex-1" /> : <span className="flex-1" />}
-                            <Button size="xs" variant="ghost" onClick={() => { removeFromCase(c.id, t); toast.add({ title: `Removed tx ${t}`, type: "info" }); }}>Remove</Button>
+                            <Button size="xs" variant="ghost" onClick={async () => { if (await removeFromCase(c.id, t)) toast.add({ title: `Removed tx ${t}`, type: "info" }); }}>Remove</Button>
                           </li>
                         );
                       })}
@@ -145,7 +151,7 @@ export default function CasesPage() {
                     </div>
                   ))}
                   <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a case note" />
-                  <Button size="sm" className="justify-self-start" disabled={!note.trim()} onClick={() => { addCaseNote(c.id, note.trim()); setNote(""); toast.add({ title: "Note added", type: "success" }); }}>
+                  <Button size="sm" className="justify-self-start" disabled={!note.trim()} onClick={async () => { if (await addCaseNote(c.id, note.trim())) { setNote(""); toast.add({ title: "Note added", type: "success" }); } }}>
                     Add note
                   </Button>
                 </section>

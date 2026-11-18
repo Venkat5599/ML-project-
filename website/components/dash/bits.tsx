@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { CaseStatus, Label, Status } from "@/lib/dash/mock";
+import type { CaseStatus, Label, Status } from "@/lib/dash/types";
 
 export const LABEL_COLOR: Record<Label, string> = { illicit: "#F2716B", licit: "#5FA8F5", unknown: "#8B90A6" };
 

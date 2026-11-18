@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { AlertSheet } from "@/components/dash/alert-sheet";
 import { LABEL_COLOR, LabelBadge, ScoreBar } from "@/components/dash/bits";
-import { neighbourhood, type GraphNode } from "@/lib/dash/mock";
+import { api, ApiError } from "@/lib/dash/api";
+import type { FlowGraph, GraphNode } from "@/lib/dash/types";
 import { useDash } from "@/lib/dash/store";
 
 const COL = 210;
@@ -25,9 +26,26 @@ export default function FlowPage() {
   const known = useMemo(() => new Map(alerts.map((a) => [a.id, a])), [alerts]);
   const center = focus ?? alerts[0]?.id;
   const [picked, setPicked] = useState<number | null>(null);
+  const [graph, setGraph] = useState<{ key: string; data: FlowGraph | null; error: string | null } | null>(null);
+  const key = `${center}:${hops}`;
+
+  useEffect(() => {
+    if (center == null) return;
+    let live = true;
+    api
+      .graph(center, hops)
+      .then((data) => live && setGraph({ key, data, error: null }))
+      .catch((e: ApiError) => live && setGraph({ key, data: null, error: e.kind === "not_found" ? `tx ${center} is not in the dataset.` : e.message }));
+    return () => {
+      live = false;
+    };
+  }, [center, hops, key]);
+  const loading = !graph || graph.key !== key;
 
   const { nodes, edges, pos, width, height } = useMemo(() => {
-    const g = neighbourhood(center, hops, known);
+    const g = !loading && graph?.data
+      ? { nodes: graph.data.nodes, edges: graph.data.links.map((l) => ({ from: l.source, to: l.target })) }
+      : { nodes: [] as GraphNode[], edges: [] as { from: number; to: number }[] };
     const cols = new Map<number, GraphNode[]>();
     g.nodes.forEach((n) => cols.set(n.hop, [...(cols.get(n.hop) ?? []), n]));
     const minHop = -hops;
@@ -39,7 +57,7 @@ export default function FlowPage() {
       list.forEach((n, i) => pos.set(n.id, { x: 20 + (hop - minHop) * COL, y: top + i * ROW }));
     });
     return { ...g, pos, width: 40 + hops * 2 * COL + NW, height };
-  }, [center, hops, known]);
+  }, [graph, loading, hops]);
 
   const sel = nodes.find((n) => n.id === (picked ?? center)) ?? nodes[0];
   const selAlert = sel ? known.get(sel.id) : undefined;
@@ -91,6 +109,11 @@ export default function FlowPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
         <Card className="overflow-hidden py-0">
+          {loading || graph?.error ? (
+            <p className="border-b px-4 py-2 font-mono text-xs text-muted-foreground">
+              {loading ? `Reading the ${hops}-hop neighbourhood of tx ${center}…` : graph?.error}
+            </p>
+          ) : null}
           <div className="overflow-x-auto">
             <svg width={width} height={height} className="block min-w-full" role="img" aria-label={`Flow neighbourhood of transaction ${center}`}>
               <defs>
@@ -140,7 +163,12 @@ export default function FlowPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {sel ? <LabelBadge label={sel.label} className="justify-self-start" /> : null}
+            {sel ? (
+              <div className="flex items-center gap-2">
+                <LabelBadge label={sel.label} />
+                <span className="font-mono text-xs text-muted-foreground">t{sel.time_step} · {sel.degree} flows</span>
+              </div>
+            ) : null}
             <ScoreBar value={sel?.score ?? null} />
             <p className="text-sm text-muted-foreground">
               {nodes.length - 1} neighbours shown · {edges.length} flows. Click a node to inspect it, double-click to re-center.

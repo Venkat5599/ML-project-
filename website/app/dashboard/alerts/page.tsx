@@ -13,7 +13,7 @@ import { toast } from "@/components/ui/toast";
 import { AlertSheet } from "@/components/dash/alert-sheet";
 import { LabelBadge, ScoreBar, StatusBadge } from "@/components/dash/bits";
 import { useDash } from "@/lib/dash/store";
-import { fmtTime } from "@/lib/dash/format";
+import { fmt3 } from "@/lib/dash/format";
 
 const PAGE = 15;
 const LABELS = [
@@ -30,7 +30,9 @@ const STATUSES = [
   { value: "escalated", label: "Escalated" },
   { value: "cleared", label: "Cleared" },
 ];
-type SortKey = "hybrid" | "step" | "flaggedAt";
+type SortKey = "hybrid" | "step" | "flows";
+const sortVal = (a: { hybrid: number | null; step: number; inDeg: number; outDeg: number }, k: SortKey) =>
+  k === "hybrid" ? (a.hybrid ?? -1) : k === "step" ? a.step : a.inDeg + a.outDeg;
 
 export default function AlertsPage() {
   const alerts = useDash((s) => s.alerts);
@@ -53,11 +55,11 @@ export default function AlertsPage() {
   const rows = useMemo(() => {
     const q = query.trim();
     return alerts
-      .filter((a) => a.hybrid >= min)
+      .filter((a) => (a.hybrid ?? 0) >= min)
       .filter((a) => label === "all" || a.label === label)
       .filter((a) => (status === "all" ? true : status === "open" ? a.status === "new" || a.status === "reviewing" : a.status === status))
       .filter((a) => !q || String(a.id).includes(q))
-      .sort((a, b) => (a[sort.key] - b[sort.key]) * sort.dir);
+      .sort((a, b) => (sortVal(a, sort.key) - sortVal(b, sort.key)) * sort.dir);
   }, [alerts, min, label, status, query, sort]);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
   const p = Math.min(page, pages - 1);
@@ -111,8 +113,8 @@ export default function AlertsPage() {
       {sel.length ? (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card px-4 py-2 text-sm">
           <span>{sel.length} selected</span>
-          <Button size="sm" variant="secondary" onClick={() => { assign(sel); done("Assigned to you"); }}>Assign to me</Button>
-          <Button size="sm" variant="secondary" onClick={() => { setStatus(sel, "cleared"); done("Cleared as false positives"); }}>Clear</Button>
+          <Button size="sm" variant="secondary" onClick={() => void assign(sel).then((ok) => ok && done("Assigned to you"))}>Assign to me</Button>
+          <Button size="sm" variant="secondary" onClick={() => void setStatus(sel, "cleared").then((ok) => ok && done("Cleared as false positives"))}>Clear</Button>
           <Button size="sm" variant="destructive" onClick={() => setEscOpen(true)}>Escalate…</Button>
           <Button size="sm" variant="ghost" onClick={() => setSel([])}>Deselect</Button>
         </div>
@@ -138,7 +140,7 @@ export default function AlertsPage() {
                 <TableHead>GraphSAGE</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Assignee</TableHead>
-                <TableHead className="pr-4 text-right"><button className="inline-flex items-center gap-1" onClick={() => sortBy("flaggedAt")}>Flagged <ArrowDownUp className="size-3" /></button></TableHead>
+                <TableHead className="pr-4 text-right"><button className="inline-flex items-center gap-1" onClick={() => sortBy("flows")}>Flows in/out <ArrowDownUp className="size-3" /></button></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -151,11 +153,11 @@ export default function AlertsPage() {
                   <TableCell className="font-mono">t{a.step}</TableCell>
                   <TableCell><LabelBadge label={a.label} /></TableCell>
                   <TableCell><ScoreBar value={a.hybrid} /></TableCell>
-                  <TableCell className="font-mono text-xs">{a.xgb.toFixed(3)}</TableCell>
-                  <TableCell className="font-mono text-xs">{a.gnn.toFixed(3)}</TableCell>
+                  <TableCell className="font-mono text-xs">{fmt3(a.xgb)}</TableCell>
+                  <TableCell className="font-mono text-xs">{fmt3(a.gnn)}</TableCell>
                   <TableCell><StatusBadge status={a.status} /></TableCell>
                   <TableCell className="text-sm text-muted-foreground">{a.assignee ?? "–"}</TableCell>
-                  <TableCell className="pr-4 text-right text-xs text-muted-foreground">{fmtTime(a.flaggedAt)}</TableCell>
+                  <TableCell className="pr-4 text-right font-mono text-xs text-muted-foreground">{a.inDeg} / {a.outDeg}</TableCell>
                 </TableRow>
               ))}
               {!view.length ? (
@@ -189,10 +191,12 @@ export default function AlertsPage() {
             <Button variant="ghost" onClick={() => setEscOpen(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                const id = escalate(sel, escTarget, escTitle.trim() || undefined);
+              onClick={async () => {
+                const id = await escalate(sel, escTarget, escTitle.trim() || undefined);
+                if (!id) return;
                 setEscOpen(false);
                 setEscTitle("");
+                setEscTarget("new");
                 done(`Escalated to ${id}`);
               }}
             >

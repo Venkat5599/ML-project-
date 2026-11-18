@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertSheet } from "@/components/dash/alert-sheet";
 import { Kpi, LabelBadge, ScoreBar, StatusBadge } from "@/components/dash/bits";
 import { inQueue, useDash } from "@/lib/dash/store";
-import { fmtTime } from "@/lib/dash/format";
+import { fmtInt, fmtTime } from "@/lib/dash/format";
 
 const cfg = {
   illicit: { label: "Illicit", color: "#F2716B" },
@@ -25,6 +25,7 @@ export default function Overview() {
   const activity = useDash((s) => s.activity);
   const cases = useDash((s) => s.cases);
   const threshold = useDash((s) => s.settings.threshold);
+  const win = useDash((s) => s.window);
   const [open, setOpen] = useState<number | null>(null);
 
   const q = useMemo(() => inQueue(alerts, threshold), [alerts, threshold]);
@@ -39,7 +40,7 @@ export default function Overview() {
   return (
     <>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi title="In queue" value={q.length} hint={`score ≥ ${threshold.toFixed(2)}`} />
+        <Kpi title="In queue" value={q.length} hint={`score ≥ ${threshold.toFixed(2)} · of ${win ? fmtInt(win.n_scored) : "–"} scored`} />
         <Kpi title="Unreviewed" value={count("new")} hint={`${count("reviewing")} in review`} />
         <Kpi title="Escalated" value={count("escalated")} hint={`${cases.filter((c) => c.status !== "closed").length} open cases`} />
         <Kpi title="Cleared" value={count("cleared")} hint="false positives" />
@@ -69,9 +70,10 @@ export default function Overview() {
         <Card>
           <CardHeader>
             <CardTitle className="font-normal">Recent activity</CardTitle>
-            <CardDescription>Latest actions in this session</CardDescription>
+            <CardDescription>Latest analyst actions, saved by the backend</CardDescription>
           </CardHeader>
           <CardContent>
+            {!activity.length ? <p className="text-sm text-muted-foreground">Nothing yet. Assign, clear or escalate an alert and it shows up here.</p> : null}
             <ul className="grid gap-3">
               {activity.slice(0, 7).map((a, i) => (
                 <li key={i} className="flex gap-3 text-sm">
@@ -108,7 +110,7 @@ export default function Overview() {
                 <TableHead>Label</TableHead>
                 <TableHead>Hybrid score</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Flagged</TableHead>
+                <TableHead className="text-right">Flows in/out</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -119,7 +121,7 @@ export default function Overview() {
                   <TableCell><LabelBadge label={a.label} /></TableCell>
                   <TableCell><ScoreBar value={a.hybrid} /></TableCell>
                   <TableCell><StatusBadge status={a.status} /></TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">{fmtTime(a.flaggedAt)}</TableCell>
+                  <TableCell className="text-right font-mono text-xs text-muted-foreground">{a.inDeg} / {a.outDeg}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

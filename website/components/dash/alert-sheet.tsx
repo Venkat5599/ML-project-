@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -10,19 +10,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/components/ui/toast";
 import { useDash } from "@/lib/dash/store";
 import { fmtTime } from "@/lib/dash/format";
+import type { Shap } from "@/lib/dash/types";
 import { LabelBadge, ScoreBar, StatusBadge } from "./bits";
 
 export function AlertSheet({ id, onClose }: { id: number | null; onClose: () => void }) {
   const alert = useDash((s) => s.alerts.find((a) => a.id === id) ?? null);
   const cases = useDash((s) => s.cases);
-  const { assign, setStatus, escalate, addNote, setFocus } = useDash.getState();
+  const explanation = useDash((s) => (id == null ? undefined : s.explanations[id]));
+  const { assign, setStatus, escalate, addNote, setFocus, explain } = useDash.getState();
+  useEffect(() => {
+    if (id != null) void explain(id);
+  }, [id, explain]);
+  const shap: Shap[] = explanation && typeof explanation === "object" ? explanation.contributions : [];
   const [note, setNote] = useState("");
   const [target, setTarget] = useState<string>("new");
   const caseItems = useMemo(
     () => [{ value: "new", label: "New case" }, ...cases.filter((c) => c.status !== "closed").map((c) => ({ value: c.id, label: `${c.id} · ${c.title}` }))],
     [cases],
   );
-  const maxShap = alert ? Math.max(...alert.shap.map((s) => Math.abs(s.shap))) : 1;
+  const maxShap = Math.max(1e-9, ...shap.map((s) => Math.abs(s.shap)));
 
   return (
     <Sheet open={id != null} onOpenChange={(o) => !o && onClose()}>
@@ -32,7 +38,7 @@ export function AlertSheet({ id, onClose }: { id: number | null; onClose: () => 
             <SheetHeader>
               <SheetTitle className="font-mono text-lg font-normal">tx {alert.id}</SheetTitle>
               <SheetDescription>
-                Step {alert.step} · flagged {fmtTime(alert.flaggedAt)}
+                Time step {alert.step} · test window
               </SheetDescription>
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <LabelBadge label={alert.label} />
@@ -49,9 +55,10 @@ export function AlertSheet({ id, onClose }: { id: number | null; onClose: () => 
                     [
                       ["Hybrid (calibrated)", alert.hybrid],
                       ["XGBoost", alert.xgb],
+                      ["Random forest", alert.rf],
                       ["GraphSAGE", alert.gnn],
-                      ["Autoencoder", alert.ae],
-                      ["Isolation forest", alert.iso],
+                      ["Autoencoder pctl", alert.ae],
+                      ["Isolation forest pctl", alert.iso],
                     ] as const
                   ).map(([k, v]) => (
                     <div key={k} className="grid grid-cols-[9rem_1fr] items-center gap-2 text-sm">
@@ -62,11 +69,16 @@ export function AlertSheet({ id, onClose }: { id: number | null; onClose: () => 
                 </div>
               </section>
               <section>
-                <h3 className="mb-2 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">Why it was flagged (SHAP)</h3>
+                <h3 className="mb-2 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">Why it was flagged (XGBoost SHAP)</h3>
                 <div className="grid gap-1.5 rounded-xl border bg-card p-3">
-                  {alert.shap.map((s) => (
+                  {explanation === "loading" || explanation === undefined ? (
+                    <p className="font-mono text-xs text-muted-foreground">Computing SHAP values…</p>
+                  ) : explanation === "missing" ? (
+                    <p className="text-xs text-muted-foreground">No explanation: the backend could not load this transaction&apos;s features or the XGBoost model.</p>
+                  ) : null}
+                  {shap.map((s) => (
                     <div key={s.feature} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-center gap-2 font-mono text-xs">
-                      <span>{s.feature}</span>
+                      <span title={`feature value ${s.value.toFixed(3)}`}>{s.feature}</span>
                       <div className="relative h-2 rounded-full bg-muted">
                         <div
                           className="absolute top-0 h-2 rounded-full"
@@ -95,14 +107,14 @@ export function AlertSheet({ id, onClose }: { id: number | null; onClose: () => 
               <section className="grid gap-2">
                 <h3 className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">Actions</h3>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => { assign([alert.id]); toast.add({ title: "Assigned to you", description: `tx ${alert.id}`, type: "success" }); }}>
+                  <Button size="sm" variant="secondary" onClick={async () => { if (await assign([alert.id])) toast.add({ title: "Assigned to you", description: `tx ${alert.id}`, type: "success" }); }}>
                     Assign to me
                   </Button>
-                  <Button size="sm" variant="secondary" disabled={alert.status === "cleared"} onClick={() => { setStatus([alert.id], "cleared"); toast.add({ title: "Cleared as false positive", description: `tx ${alert.id}`, type: "success" }); }}>
+                  <Button size="sm" variant="secondary" disabled={alert.status === "cleared"} onClick={async () => { if (await setStatus([alert.id], "cleared")) toast.add({ title: "Cleared as false positive", description: `tx ${alert.id}`, type: "success" }); }}>
                     Clear
                   </Button>
                   {alert.status === "cleared" || alert.status === "escalated" ? (
-                    <Button size="sm" variant="ghost" onClick={() => { setStatus([alert.id], "reviewing"); toast.add({ title: "Reopened", description: `tx ${alert.id}`, type: "info" }); }}>
+                    <Button size="sm" variant="ghost" onClick={async () => { if (await setStatus([alert.id], "reviewing")) toast.add({ title: "Reopened", description: `tx ${alert.id}`, type: "info" }); }}>
                       Reopen
                     </Button>
                   ) : null}
@@ -122,9 +134,9 @@ export function AlertSheet({ id, onClose }: { id: number | null; onClose: () => 
                     size="sm"
                     variant="destructive"
                     className="h-8"
-                    onClick={() => {
-                      const cid = escalate([alert.id], target as string, `Case from tx ${alert.id}`);
-                      toast.add({ title: `Escalated to ${cid}`, description: `tx ${alert.id}`, type: "warning" });
+                    onClick={async () => {
+                      const cid = await escalate([alert.id], target as string, `Case from tx ${alert.id}`);
+                      if (cid) toast.add({ title: `Escalated to ${cid}`, description: `tx ${alert.id}`, type: "warning" });
                     }}
                   >
                     Escalate
@@ -150,7 +162,7 @@ export function AlertSheet({ id, onClose }: { id: number | null; onClose: () => 
                   size="sm"
                   className="justify-self-start"
                   disabled={!note.trim()}
-                  onClick={() => { addNote(alert.id, note.trim()); setNote(""); toast.add({ title: "Note added", type: "success" }); }}
+                  onClick={async () => { if (await addNote(alert.id, note.trim())) { setNote(""); toast.add({ title: "Note added", type: "success" }); } }}
                 >
                   Add note
                 </Button>

@@ -75,11 +75,11 @@ export default function SettingsPage() {
         <CardFooter className="gap-2">
           <Button
             disabled={!dirty || !draft.analyst.trim()}
-            onClick={() => {
-              updateSettings({ ...draft, analyst: draft.analyst.trim() });
+            onClick={async () => {
+              if (!(await updateSettings({ ...draft, analyst: draft.analyst.trim() }))) return;
               if (draft.autoAssign && !settings.autoAssign) {
                 const ids = inQueue(alerts, draft.threshold).filter((a) => a.status === "new").map((a) => a.id);
-                if (ids.length) useDash.getState().assign(ids, draft.analyst.trim());
+                if (ids.length) await useDash.getState().assign(ids, draft.analyst.trim());
               }
               toast.add({ title: "Settings saved", type: "success" });
             }}
@@ -91,22 +91,24 @@ export default function SettingsPage() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="font-normal">Mock session</CardTitle>
-          <CardDescription>Alerts, cases and activity on this console are generated sample data, saved in this browser only</CardDescription>
+          <CardTitle className="font-normal">Analyst workspace</CardTitle>
+          <CardDescription>
+            Statuses, cases, notes and activity live in <code className="font-mono text-xs">data/processed/workflow.sqlite</code>. Model scores are read-only and are not affected.
+          </CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button variant="destructive" onClick={() => setConfirm(true)}>Reset mock data</Button>
+          <Button variant="destructive" onClick={() => setConfirm(true)}>Reset workspace</Button>
         </CardFooter>
       </Card>
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-normal">Reset the mock session?</DialogTitle>
-            <DialogDescription>Every assignment, escalation, case and note you made here is discarded.</DialogDescription>
+            <DialogTitle className="font-normal">Reset the analyst workspace?</DialogTitle>
+            <DialogDescription>Every assignment, escalation, case and note is deleted from the backend. Settings are kept.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => { reset(); setConfirm(false); toast.add({ title: "Mock data reset", type: "info" }); }}>Reset</Button>
+            <Button variant="destructive" onClick={async () => { if (await reset()) { setConfirm(false); toast.add({ title: "Workspace reset", type: "info" }); } }}>Reset</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
