@@ -19,7 +19,7 @@ from sklearn.svm import LinearSVC, SVC
 from sklearn.metrics import average_precision_score
 from xgboost import XGBClassifier
 
-from chainsleuth.config import SEED
+from chainsleuth.config import SEED, xgb_device
 from chainsleuth.data import load_dataset
 from chainsleuth.experiments import save_metrics
 from chainsleuth.metrics import evaluate_scores, timed_score
@@ -64,7 +64,7 @@ def tune_xgb(trial, X_train, y_train, pos_weight):
         scale_pos_weight=trial.suggest_float("scale_pos_weight", pos_weight / 4, pos_weight * 4, log=True),
         min_child_weight=trial.suggest_float("min_child_weight", 0.1, 10, log=True),
         reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 10, log=True),
-        tree_method="hist", device="cuda", eval_metric="aucpr",
+        tree_method="hist", device=xgb_device(), eval_metric="aucpr",
         random_state=SEED, n_jobs=-1,
     )
     m.fit(X_train, y_train)

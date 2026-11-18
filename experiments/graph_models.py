@@ -21,7 +21,7 @@ import torch.nn.functional as F
 from sklearn.metrics import average_precision_score
 from torch_geometric.nn import SAGEConv
 
-from chainsleuth.config import DATA_PROCESSED, MODELS_DIR, SEED, TEST_STEPS
+from chainsleuth.config import DATA_PROCESSED, MODELS_DIR, SEED, TEST_STEPS, torch_device
 from chainsleuth.experiments import save_metrics
 from chainsleuth.graph import load_graph
 from chainsleuth.metrics import evaluate_scores
@@ -110,7 +110,7 @@ def main() -> None:
     parser.add_argument("--patience", type=int, default=20)
     args = parser.parse_args()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch_device()
     data = load_graph()
     print(f"device={device}")
 

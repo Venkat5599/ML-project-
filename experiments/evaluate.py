@@ -31,7 +31,7 @@ from sklearn.svm import LinearSVC, SVC
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
-from chainsleuth.config import FIGURES_DIR, METRICS_DIR, MODELS_DIR, SEED
+from chainsleuth.config import FIGURES_DIR, METRICS_DIR, MODELS_DIR, SEED, xgb_device
 from chainsleuth.data import load_dataset
 from chainsleuth.experiments import save_metrics
 from chainsleuth.metrics import evaluate_scores, timed_score
@@ -64,7 +64,7 @@ def build_supervised(params: dict | None, kind: str, pos_weight: float):
     if kind == "rf":
         return RandomForestClassifier(n_jobs=-1, random_state=SEED, **p)
     if kind == "xgb":
-        return XGBClassifier(tree_method="hist", device="cuda", eval_metric="aucpr",
+        return XGBClassifier(tree_method="hist", device=xgb_device(), eval_metric="aucpr",
                              random_state=SEED, n_jobs=-1, **p)
     if kind == "svm":
         kernel = p.pop("kernel", "linear")
@@ -183,7 +183,7 @@ def main() -> None:
                              {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.1,
                               "subsample": 0.8, "colsample_bytree": 0.8,
                               "scale_pos_weight": float((yr_fit == 0).sum() / max((yr_fit == 1).sum(), 1))}),
-                          tree_method="hist", device="cuda", eval_metric="aucpr",
+                          tree_method="hist", device=xgb_device(), eval_metric="aucpr",
                           random_state=SEED, n_jobs=-1)
     xgb_r.fit(Xr_fit, yr_fit)
     rs = xgb_r.predict_proba(Xr_test)[:, 1]
@@ -200,7 +200,7 @@ def main() -> None:
     X30_fit, _ = xy(fit_df, top30)
     X30_test, _ = xy(test, top30)
     xgb30 = XGBClassifier(**(load_tuned("tuned_xgboost") or {}), tree_method="hist",
-                          device="cuda", eval_metric="aucpr", random_state=SEED, n_jobs=-1)
+                          device=xgb_device(), eval_metric="aucpr", random_state=SEED, n_jobs=-1)
     xgb30.fit(X30_fit, y_fit)
     s30 = xgb30.predict_proba(X30_test)[:, 1]
     m = evaluate_scores(y_test, s30)

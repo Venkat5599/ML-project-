@@ -34,7 +34,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from xgboost import XGBClassifier
 
 from chainsleuth.config import (DATA_PROCESSED, FIGURES_DIR, METRICS_DIR,
-                                MODELS_DIR, SEED, TEST_STEPS)
+                                MODELS_DIR, SEED, TEST_STEPS, xgb_device, torch_device)
 from chainsleuth.data import load_dataset
 from chainsleuth.experiments import save_metrics
 from chainsleuth.graph import load_graph
@@ -45,7 +45,7 @@ from experiments.graph_features import GRAPH_COLS, GRAPH_FEATURE_PATH
 
 warnings.filterwarnings("ignore")
 GNN_EPOCHS, GNN_PATIENCE = 120, 15
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = torch_device()
 
 
 def load_params(name: str) -> dict:
@@ -55,14 +55,14 @@ def load_params(name: str) -> dict:
 # ---------------------------------------------------------------- components
 def fit_xgb(X, y):
     m = XGBClassifier(**load_params("tuned_xgboost"), tree_method="hist",
-                      device="cuda", eval_metric="aucpr", random_state=SEED, n_jobs=-1)
+                      device=xgb_device(), eval_metric="aucpr", random_state=SEED, n_jobs=-1)
     m.fit(X, y)
     return m, lambda X_: m.predict_proba(X_)[:, 1]
 
 
 def fit_xgb_graph(X, y):
     m = XGBClassifier(**load_params("tuned_xgboost"), tree_method="hist",
-                      device="cuda", eval_metric="aucpr", random_state=SEED, n_jobs=-1)
+                      device=xgb_device(), eval_metric="aucpr", random_state=SEED, n_jobs=-1)
     m.fit(X, y)
     return m, lambda X_: m.predict_proba(X_)[:, 1]
 

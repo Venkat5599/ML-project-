@@ -17,7 +17,7 @@ import pandas as pd
 from sklearn.metrics import average_precision_score
 from xgboost import XGBClassifier
 
-from chainsleuth.config import DATA_PROCESSED, METRICS_DIR, MODELS_DIR, SEED
+from chainsleuth.config import DATA_PROCESSED, METRICS_DIR, MODELS_DIR, SEED, xgb_device
 from chainsleuth.data import load_dataset, load_raw
 from chainsleuth.experiments import save_metrics
 from chainsleuth.metrics import evaluate_scores, timed_score
@@ -83,7 +83,7 @@ def main() -> None:
     params = json.loads((METRICS_DIR / "tuned_xgboost.json").read_text())["params"]
 
     print("[xgb: tabular only]")
-    m1 = XGBClassifier(**params, tree_method="hist", device="cuda",
+    m1 = XGBClassifier(**params, tree_method="hist", device=xgb_device(),
                        eval_metric="aucpr", random_state=SEED, n_jobs=-1)
     m1.fit(X_train, y_train)
     s1, _ = timed_score(lambda X: m1.predict_proba(X)[:, 1], X_val)
@@ -91,7 +91,7 @@ def main() -> None:
     print(f"  AP={r1['avg_precision']:.4f}")
 
     print("[xgb: tabular + graph features]")
-    m2 = XGBClassifier(**params, tree_method="hist", device="cuda",
+    m2 = XGBClassifier(**params, tree_method="hist", device=xgb_device(),
                        eval_metric="aucpr", random_state=SEED, n_jobs=-1)
     m2.fit(Xg_train, y_train)
     s2, _ = timed_score(lambda X: m2.predict_proba(X)[:, 1], Xg_val)

@@ -12,7 +12,7 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 
-from chainsleuth.config import MODELS_DIR, SEED
+from chainsleuth.config import MODELS_DIR, SEED, torch_device
 from chainsleuth.data import load_dataset
 from chainsleuth.experiments import save_metrics
 from chainsleuth.metrics import evaluate_scores, timed_score
@@ -39,7 +39,7 @@ def run_autoencoder(X_licit, X_eval, y_eval) -> tuple[dict, np.ndarray]:
     import torch.nn as nn
 
     torch.manual_seed(SEED)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch_device()
 
     scaler = StandardScaler().fit(X_licit)
     Xl = torch.tensor(scaler.transform(X_licit), dtype=torch.float32)

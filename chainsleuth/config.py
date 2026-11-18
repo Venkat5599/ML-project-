@@ -37,3 +37,18 @@ FILES = {
 # cols 95-166 = 72 aggregated (one-hop neighbour) features.
 N_LOCAL_FEATURES = 93
 N_AGG_FEATURES = 72
+
+
+def torch_device() -> str:
+    """CUDA when present, else CPU. Override with CHAINSLEUTH_DEVICE=cpu|cuda|mps."""
+    import os
+    forced = os.environ.get("CHAINSLEUTH_DEVICE")
+    if forced:
+        return forced
+    import torch
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def xgb_device() -> str:
+    """XGBoost only accelerates on CUDA; anything else trains on CPU."""
+    return "cuda" if torch_device() == "cuda" else "cpu"

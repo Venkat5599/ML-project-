@@ -16,7 +16,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
-from chainsleuth.config import SEED
+from chainsleuth.config import SEED, xgb_device
 from chainsleuth.data import load_dataset
 from chainsleuth.experiments import normalize_scores, save_metrics
 from chainsleuth.metrics import evaluate_scores, timed_score
@@ -49,7 +49,7 @@ def build_models(pos_weight: float) -> dict:
             XGBClassifier(
                 n_estimators=300, max_depth=6, learning_rate=0.1,
                 subsample=0.8, colsample_bytree=0.8, scale_pos_weight=pos_weight,
-                tree_method="hist", device="cuda", eval_metric="aucpr",
+                tree_method="hist", device=xgb_device(), eval_metric="aucpr",
                 random_state=SEED, n_jobs=-1,
             ),
         ),
