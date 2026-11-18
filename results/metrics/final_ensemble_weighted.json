@@ -16,5 +16,13 @@
     "recall@100": 0.09233610341643583,
     "precision@250": 1.0,
     "recall@250": 0.23084025854108955
-  }
+  },
+  "weights": {
+    "xgb": 0.46,
+    "rf": 0.28,
+    "ae": 0.22,
+    "gnn": 0.03,
+    "iso": 0.01
+  },
+  "weights_source": "CUDA run, as printed by experiments/hybrid.py and quoted in report/REPORT.md 5.3 (rounded to 2 dp); later runs save the exact values here"
 }
