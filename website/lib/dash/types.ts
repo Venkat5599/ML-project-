@@ -78,6 +78,34 @@ export interface Explanation {
   contributions: Shap[];
 }
 
+export type Window = "train" | "validation" | "test" | "unknown";
+
+export interface ScoredRow {
+  row: number;
+  tx_id: number | null;
+  time_step: number | null;
+  window: Window;
+  /** The saved models were fit on steps 1-34, so these scores are optimistic. */
+  in_sample: boolean;
+  xgb: number;
+  rf: number | null;
+  reasons: Shap[];
+  label: Label;
+}
+
+export interface TxScore extends ScoredRow {
+  hybrid: number | null;
+  in_degree: number;
+  out_degree: number;
+}
+
+export interface BatchScore {
+  n: number;
+  n_flagged: number;
+  n_in_sample: number;
+  rows: ScoredRow[];
+}
+
 export interface GraphNode {
   id: number;
   label: Label;

@@ -1,4 +1,4 @@
-import type { Explanation, FlowGraph, Settings, Snapshot } from "./types";
+import type { BatchScore, Explanation, FlowGraph, Settings, Snapshot, TxScore } from "./types";
 
 /**
  * The console is a static export, so the browser talks to the local FastAPI
@@ -17,13 +17,14 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+async function call<T>(path: string, init?: { method?: string; body?: unknown; raw?: string }): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
       method: init?.method ?? "GET",
-      headers: init?.body !== undefined ? { "content-type": "application/json" } : undefined,
-      body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+      headers:
+        init?.raw !== undefined ? { "content-type": "text/csv" } : init?.body !== undefined ? { "content-type": "application/json" } : undefined,
+      body: init?.raw ?? (init?.body !== undefined ? JSON.stringify(init.body) : undefined),
       cache: "no-store",
     });
   } catch {
@@ -60,4 +61,8 @@ export const api = {
   reset: () => post<Snapshot>("/api/console/reset"),
   explain: (id: number) => call<Explanation>(`/api/tx/${id}/explain?top=10`),
   graph: (id: number, hops: 1 | 2) => call<FlowGraph>(`/api/tx/${id}/graph?hops=${hops}&max_nodes=60`),
+  scoreTx: (id: number) => call<TxScore>(`/api/score/tx/${id}?top=10`),
+  scoreCsv: (csv: string) => call<BatchScore>("/api/score/batch", { method: "POST", raw: csv }),
+  /** Real test-window rows from the dataset, as a CSV download URL. */
+  sampleUrl: (n: number, label: "any" | "illicit" | "licit" | "unknown") => `${API_URL}/api/score/sample?n=${n}&label=${label}`,
 };
