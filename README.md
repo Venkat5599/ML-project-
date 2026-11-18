@@ -85,13 +85,16 @@ Every file, in the order data flows through it:
 | `experiments/evaluate.py` | retrains tuned models once, writes test metrics + ablations |
 | `experiments/anomaly.py` | Isolation Forest + autoencoder (fit on licit only) |
 | `experiments/graph_features.py` | NetworkX topology features (degree, PageRank, ...) |
-| `experiments/graph_models.py` | GraphSAGE on GPU: val early-stop, fixed-epoch refit |
-| `experiments/hybrid.py` | weight-tuned + stacked + calibrated ensemble |
-| `backend/main.py` | FastAPI: alerts, tx details, SHAP, directed flow graph |
+| `experiments/graph_models.py` | GraphSAGE (CUDA or CPU): val early-stop, fixed-epoch refit |
+| `experiments/hybrid.py` | weight-tuned + stacked + calibrated ensemble, writes `test_scores.parquet` |
+| `experiments/export_site_data.py` | regenerates the console's `website/lib/dash/real.ts` from `results/metrics` |
+| `backend/main.py` | FastAPI: alerts, tx details, SHAP, directed flow graph, console endpoints |
+| `backend/workflow.py` | SQLite store for analyst actions: statuses, cases, notes, activity, settings |
 | `frontend/` | Next.js app: alert table + investigation canvas |
-| `run_app.bat` | one-click local launch (backend + frontend) |
+| `website/` | Next.js static site + `/dashboard` investigation console (live backend data) |
+| `run_app.sh` / `run_app.bat` | one-click local launch (backend + frontend) |
 | `report/REPORT.md` | the evaluation report (all numbers generated) |
-| `tests/` | leakage + metrics unit tests (`pytest tests/`) |
+| `tests/` | leakage, metrics, workflow, backend API and site-export tests (`pytest tests/`) |
 
 Rule of thumb: scripts read from `data/processed/` and write to
 `results/metrics/` + `results/figures/`. Nothing touches the raw CSVs except
