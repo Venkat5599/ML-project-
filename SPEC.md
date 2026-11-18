@@ -84,9 +84,14 @@ tests/             Unit tests: split/metrics logic, workflow, API contract
 
 ## Success Criteria
 
-- [ ] Reproducible pipeline: fresh clone -> download -> baselines -> tuned models
-- [ ] Metrics table comparing >= 5 tabular models + 2 anomaly detectors
-- [ ] Temporal vs. random split comparison demonstrating split effect
-- [ ] EDA figures: class imbalance, labels-over-time, feature distributions,
-      correlation heatmap, graph degree distribution
+- [x] Reproducible pipeline: fresh clone -> download -> baselines -> tuned models
+      (every experiment re-run on CPU; deltas vs. the CUDA run in `report/REPRODUCTION.md`)
+- [x] Metrics table comparing >= 5 tabular models + 2 anomaly detectors
+      (`results/metrics/comparison.md`: LR, DT, RF, XGBoost, SVM + isolation forest, autoencoder)
+- [x] Temporal vs. random split comparison demonstrating split effect
+      (`experiment_random_split_xgboost.json`: +18.6 AP points from leakage)
+- [x] EDA figures: class imbalance, labels-over-time, feature distributions,
+      correlation heatmap, graph degree distribution (`results/figures/`)
 - [ ] Report-ready results section generated from saved metrics (no hand-typed numbers)
+      - partial: `comparison.md`, the console's `real.ts` and `REPRODUCTION.md` are
+      generated; the tables in `report/REPORT.md` are still copied in by hand
