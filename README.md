@@ -7,6 +7,7 @@ evaluation contract, split policy, and framing rules.
 ## Quickstart
 
 ```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python -m experiments.download_data    # ~700MB, HuggingFace mirror, no auth
 python -m experiments.eda              # figures + stats -> results/
@@ -15,14 +16,51 @@ python -m experiments.anomaly          # isolation forest + autoencoder
 python -m experiments.tune --trials 30 # Optuna (add --models tuned_xgboost etc.)
 python -m experiments.evaluate         # final test-window evaluation + ablations
 python -m experiments.graph_features   # NetworkX topology features
-python -m experiments.graph_models     # GraphSAGE on GPU
+python -m experiments.graph_models     # GraphSAGE (CUDA if present, else CPU)
 python -m experiments.hybrid           # weighted/stacked ensemble + calibration
+python -m experiments.export_site_data # results/metrics -> website/lib/dash/real.ts
 pytest tests/
-
-# investigation app (local only)
-python -m uvicorn backend.main:app --port 8000        # FastAPI backend
-cd frontend && bun install && bun dev --port 3001     # Next.js frontend -> http://localhost:3001
 ```
+
+The scripts pick CUDA when PyTorch can see a GPU and fall back to CPU otherwise.
+Force a device with `CHAINSLEUTH_DEVICE=cpu` (or `cuda`). The backend only
+needs `evaluate`, `graph_features` and `hybrid` to have run: together they
+write `models/xgboost.joblib` and `data/processed/test_scores.parquet`.
+
+**macOS note.** The XGBoost wheel links against `libomp`, which macOS does not
+ship. Without Homebrew, borrow the copy scikit-learn bundles:
+
+```bash
+SP=$(python -c "import site; print(site.getsitepackages()[0])")
+cp "$SP/sklearn/.dylibs/libomp.dylib" "$SP/xgboost/lib/"
+install_name_tool -add_rpath @loader_path "$SP/xgboost/lib/libxgboost.dylib"
+codesign -f -s - "$SP/xgboost/lib/libxgboost.dylib"
+```
+
+## Running the apps (local only)
+
+```bash
+python -m uvicorn backend.main:app --port 8000   # FastAPI backend, needed by both UIs
+
+# investigation app -> http://localhost:3001
+cd frontend && bun install && bun dev --port 3001
+
+# project site + investigation console -> http://localhost:4430 (console at /dashboard/)
+cd website && bun install && bun dev
+```
+
+`./run_app.sh` (macOS/Linux) or `run_app.bat` (Windows) starts the backend and
+the `frontend/` app together.
+
+The console at `/dashboard/` reads everything live from the backend: the alert
+queue is the calibrated hybrid ranking of the 67,504 test-window transactions (labelled and unknown),
+SHAP reasons come from the tuned XGBoost model, and the flow canvas draws the
+real directed neighbourhood from the edge list. Analyst actions (assign, clear,
+escalate, cases, notes) persist in `data/processed/workflow.sqlite`; delete that
+file, or use **Settings -> Reset workspace**, to start over. The model and
+time-step pages are built from `results/metrics` and render without the
+backend. Point the console at another backend with `NEXT_PUBLIC_API_URL`, and
+allow extra origins on the backend with `CHAINSLEUTH_ORIGINS` (comma-separated).
 
 ## Protocol in one line
 
