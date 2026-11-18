@@ -44,15 +44,15 @@ def build_graph(undirected: bool = True) -> Data:
     in_train = df["time_step"].isin(TRAIN_STEPS) & (df["label"] >= 0)
     scaler = StandardScaler().fit(df.loc[in_train, cols])
     x = torch.from_numpy(scaler.transform(df[cols]).astype(np.float32))
-    y = torch.from_numpy(df["label"].to_numpy()).long()
+    y = torch.tensor(df["label"].to_numpy()).long()
 
     labeled = (df["label"] >= 0).to_numpy()
     data = Data(x=x, edge_index=edge_index, y=y)
-    data.train_mask = torch.from_numpy(in_train.to_numpy())
+    data.train_mask = torch.tensor(in_train.to_numpy())
     data.val_mask = torch.from_numpy(df["time_step"].isin(VAL_STEPS).to_numpy() & labeled)
     data.test_mask = torch.from_numpy(df["time_step"].isin(TEST_STEPS).to_numpy() & labeled)
-    data.tx_id = torch.from_numpy(tx_ids)
-    data.time_step = torch.from_numpy(df["time_step"].to_numpy())
+    data.tx_id = torch.tensor(tx_ids)
+    data.time_step = torch.tensor(df["time_step"].to_numpy())
     data.scaler_mean = scaler.mean_
     data.scaler_scale = scaler.scale_
 
