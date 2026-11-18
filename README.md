@@ -19,8 +19,13 @@ python -m experiments.graph_features   # NetworkX topology features
 python -m experiments.graph_models     # GraphSAGE (CUDA if present, else CPU)
 python -m experiments.hybrid           # weighted/stacked ensemble + calibration
 python -m experiments.export_site_data # results/metrics -> website/lib/dash/real.ts
+python -m experiments.report_tables    # results/metrics -> REPORT.md section-5 tables
 pytest tests/
 ```
+
+To rebuild `report/ChainSleuth_AML_Report.docx` from `REPORT.md`, install
+pandoc (or `pip install pypandoc_binary`, which bundles it) and run
+`python -m experiments.build_report`.
 
 The scripts pick CUDA when PyTorch can see a GPU and fall back to CPU otherwise.
 Force a device with `CHAINSLEUTH_DEVICE=cpu` (or `cuda`). The backend only
@@ -93,7 +98,10 @@ Every file, in the order data flows through it:
 | `frontend/` | Next.js app: alert table + investigation canvas |
 | `website/` | Next.js static site + `/dashboard` investigation console (live backend data) |
 | `run_app.sh` / `run_app.bat` | one-click local launch (backend + frontend) |
-| `report/REPORT.md` | the evaluation report (all numbers generated) |
+| `experiments/report_tables.py` | renders REPORT.md's section-5 tables from metrics (`--check` = stale test) |
+| `experiments/build_report.py` | REPORT.md -> `ChainSleuth_AML_Report.docx` via pandoc |
+| `report/REPORT.md` | the evaluation report (section-5 tables generated) |
+| `report/REPRODUCTION.md` | CPU re-run vs. the committed CUDA metrics |
 | `tests/` | leakage, metrics, workflow, backend API and site-export tests (`pytest tests/`) |
 
 Rule of thumb: scripts read from `data/processed/` and write to
