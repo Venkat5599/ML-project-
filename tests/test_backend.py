@@ -49,6 +49,17 @@ def test_alerts_rank_by_calibrated_then_raw(client):
     assert [r["tx_id"] for r in rows][:3] == [1, 4, 3]  # tx 3 falls back to raw 0.66
 
 
+def test_calibration_ties_broken_by_raw_blend(client):
+    s = main._state["scores"]
+    s.loc[s.tx_id.isin([1, 4]), "score_hybrid_calibrated"] = 0.9  # tie after calibration
+    rows = client.get("/api/alerts").json()["rows"]
+    assert [r["tx_id"] for r in rows][:2] == [1, 4]  # raw 0.97 beats 0.75
+    s.loc[s.tx_id == 4, "score_hybrid"] = 0.99
+    main._state.pop("queue", None)
+    ids = [a["id"] for a in client.get("/api/console").json()["alerts"]]
+    assert ids[:2] == [4, 1]
+
+
 def test_alerts_label_filter(client):
     rows = client.get("/api/alerts", params={"label": "unknown"}).json()["rows"]
     assert {r["tx_id"] for r in rows} == {3, 5}

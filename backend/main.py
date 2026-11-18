@@ -117,7 +117,7 @@ def alerts(
     if label != "all":
         code = {"illicit": 1, "licit": 0, "unknown": -1}[label]
         s = s[s["label"] == code]
-    s = s.sort_values("rank_score", ascending=False)
+    s = s.sort_values(["rank_score", "score_hybrid"], ascending=False)
     total = len(s)
     s = s.iloc[offset: offset + limit]
     return {
@@ -261,7 +261,9 @@ def queue_frame() -> pd.DataFrame:
             s[f"{k}_pct"] = s[col].rank(pct=True) if col in s else np.nan
         s["in_deg"] = s["tx_id"].map(lambda n: len(st["in_adj"].get(int(n), ())))
         s["out_deg"] = s["tx_id"].map(lambda n: len(st["out_adj"].get(int(n), ())))
-        st["queue"] = s.sort_values("hybrid", ascending=False).reset_index(drop=True)
+        # isotonic calibration is a step function -> many exact ties at the top;
+        # the uncalibrated blend breaks them so the order is stable and meaningful
+        st["queue"] = s.sort_values(["hybrid", "score_hybrid"], ascending=False).reset_index(drop=True)
     return st["queue"]
 
 
@@ -294,7 +296,7 @@ def snapshot(con, limit: int) -> dict:
     q = queue_frame()
     touched = wf.touched_tx_ids(con)
     frame = pd.concat([q.head(limit), q[q["tx_id"].isin(touched)]]).drop_duplicates("tx_id")
-    frame = frame.sort_values("hybrid", ascending=False)
+    frame = frame.sort_values(["hybrid", "score_hybrid"], ascending=False)
     cfg = wf.settings(con)
     return {
         "alerts": _alert_rows(frame, wf.alert_states(con)),
