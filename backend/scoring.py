@@ -36,8 +36,15 @@ def window_of(step: int | None) -> str:
     return "unknown"
 
 
-def in_sample(step: int | None) -> bool:
-    """True when the saved models saw this time step during fitting (1-34)."""
+def in_sample(step: int | None, label: int | None = None) -> bool:
+    """True when the saved models were fit on this row.
+
+    They were fit on *labelled* rows from steps 1-34. Unlabelled rows were
+    never training data, and neither is an uploaded row the dataset doesn't
+    know (label None), whatever its time step.
+    """
+    if label is None or label < 0:
+        return False
     return step is not None and (step in TRAIN_STEPS or step in VAL_STEPS)
 
 
@@ -104,8 +111,12 @@ def _opt_int(v) -> int | None:
     return None if v is None or pd.isna(v) else int(v)
 
 
-def score_frame(frame: pd.DataFrame, xgb, rf, explainer, top: int = 3) -> list[dict]:
-    """XGBoost + random forest probability and the top SHAP reasons per row."""
+def score_frame(frame: pd.DataFrame, xgb, rf, explainer, top: int = 3,
+                labels: pd.Series | None = None) -> list[dict]:
+    """XGBoost + random forest probability and the top SHAP reasons per row.
+
+    `labels` maps tx_id -> dataset label (1/0/-1); it decides in-sample status.
+    """
     X = frame[FEATURES].to_numpy(np.float32)
     p_xgb = xgb.predict_proba(X)[:, 1]
     p_rf = rf.predict_proba(X)[:, 1] if rf is not None else np.full(len(X), np.nan)
@@ -113,6 +124,8 @@ def score_frame(frame: pd.DataFrame, xgb, rf, explainer, top: int = 3) -> list[d
     rows = []
     for i in range(len(X)):
         step = _opt_int(frame["time_step"].iat[i])
+        tx = _opt_int(frame["tx_id"].iat[i])
+        label = None if labels is None or tx is None or tx not in labels.index else int(labels[tx])
         reasons = []
         if sv is not None:
             order = np.argsort(-np.abs(sv[i]))[:top]
@@ -120,10 +133,10 @@ def score_frame(frame: pd.DataFrame, xgb, rf, explainer, top: int = 3) -> list[d
                         "value": round(float(X[i][j]), 4)} for j in order]
         rows.append({
             "row": i + 1,
-            "tx_id": _opt_int(frame["tx_id"].iat[i]),
+            "tx_id": tx,
             "time_step": step,
             "window": window_of(step),
-            "in_sample": in_sample(step),
+            "in_sample": in_sample(step, label),
             "xgb": round(float(p_xgb[i]), 4),
             "rf": None if np.isnan(p_rf[i]) else round(float(p_rf[i]), 4),
             "reasons": reasons,

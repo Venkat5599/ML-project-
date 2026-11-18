@@ -421,7 +421,7 @@ def score_tx(tx_id: int, top: int = Query(10, ge=1, le=30)):
     if tx_id not in st["feat"].index:
         raise HTTPException(404, f"tx {tx_id} is not in the Elliptic dataset")
     row = st["feat"].loc[[tx_id]].reset_index()
-    (scored,) = scoring.score_frame(row, st["model"], rf_model(), explainer(), top=top)
+    (scored,) = scoring.score_frame(row, st["model"], rf_model(), explainer(), top=top, labels=st["label"])
     s = st["scores"]
     hit = s[s["tx_id"] == tx_id]
     hybrid = None
@@ -445,7 +445,7 @@ async def score_batch(request: Request):
     except scoring.ScoreInputError as e:
         raise HTTPException(422, str(e)) from e
     st = state()
-    rows = scoring.score_frame(frame, st["model"], rf_model(), explainer())
+    rows = scoring.score_frame(frame, st["model"], rf_model(), explainer(), labels=st["label"])
     labels = st["label"]
     for r in rows:
         r["label"] = LABEL_MAP[int(labels.get(r["tx_id"], -1))] if r["tx_id"] is not None else "unknown"
