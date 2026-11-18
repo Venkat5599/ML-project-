@@ -295,15 +295,18 @@ def snapshot(con, limit: int) -> dict:
     touched = wf.touched_tx_ids(con)
     frame = pd.concat([q.head(limit), q[q["tx_id"].isin(touched)]]).drop_duplicates("tx_id")
     frame = frame.sort_values("hybrid", ascending=False)
+    cfg = wf.settings(con)
     return {
         "alerts": _alert_rows(frame, wf.alert_states(con)),
         "cases": wf.cases(con),
         "activity": wf.activity(con),
-        "settings": wf.settings(con),
+        "settings": cfg,
         "window": {
             "n_scored": int(len(q)),
             "steps": [int(q["time_step"].min()), int(q["time_step"].max())],
             "limit": limit,
+            # over the whole window, not just the rows sent back
+            "above_threshold": int((q["hybrid"] >= cfg["threshold"]).sum()),
         },
     }
 

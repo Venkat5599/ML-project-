@@ -62,7 +62,13 @@ def test_console_snapshot_shape(client):
     assert 0 <= top["ae"] <= 1 and 0 <= top["iso"] <= 1  # percentiles, not raw error
     tx3 = next(a for a in snap["alerts"] if a["id"] == 3)
     assert tx3["gnn"] is None  # missing GNN score stays missing, never 0
-    assert snap["window"] == {"n_scored": 6, "steps": [35, 49], "limit": 500}
+    assert snap["window"] == {"n_scored": 6, "steps": [35, 49], "limit": 500, "above_threshold": 3}
+
+
+def test_above_threshold_counts_beyond_the_limit(client):
+    client.put("/api/console/settings", json={"threshold": 0.1})
+    snap = client.get("/api/console", params={"limit": 1}).json()
+    assert len(snap["alerts"]) == 1 and snap["window"]["above_threshold"] == 4
 
 
 def test_console_limit_keeps_touched_alerts(client):
