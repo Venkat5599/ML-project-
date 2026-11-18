@@ -61,7 +61,12 @@ The console at `/dashboard/` reads everything live from the backend: the alert
 queue is the calibrated hybrid ranking of the 67,504 test-window transactions (labelled and unknown),
 SHAP reasons come from the tuned XGBoost model, and the flow canvas draws the
 real directed neighbourhood from the edge list. Analyst actions (assign, clear,
-escalate, cases, notes) persist in `data/processed/workflow.sqlite`; delete that
+escalate, cases, notes) persist in `data/processed/workflow.sqlite`. The
+**Score** page runs the trained models directly: look up any of the 203,769
+transaction ids, or upload a CSV of Elliptic feature rows (up to 5,000; a
+button pulls real test-window rows to try it with) and download the scored
+results. Scores for labelled rows from steps 1-34 are flagged as in-sample,
+because the saved models were fit on them. Delete `workflow.sqlite`
 file, or use **Settings -> Reset workspace**, to start over. The model and
 time-step pages are built from `results/metrics` and render without the
 backend. Point the console at another backend with `NEXT_PUBLIC_API_URL`, and
@@ -95,6 +100,7 @@ Every file, in the order data flows through it:
 | `experiments/export_site_data.py` | regenerates the console's `website/lib/dash/real.ts` from `results/metrics` |
 | `backend/main.py` | FastAPI: alerts, tx details, SHAP, directed flow graph, console endpoints |
 | `backend/workflow.py` | SQLite store for analyst actions: statuses, cases, notes, activity, settings |
+| `backend/scoring.py` | scores any tx id or an uploaded Elliptic CSV with the saved models, flags in-sample rows |
 | `frontend/` | Next.js app: alert table + investigation canvas |
 | `website/` | Next.js static site + `/dashboard` investigation console (live backend data) |
 | `run_app.sh` / `run_app.bat` | one-click local launch (backend + frontend) |
