@@ -16,6 +16,7 @@ const TITLES: Record<string, string> = {
   "/dashboard/alerts": "Alert queue",
   "/dashboard/flow": "Flow canvas",
   "/dashboard/cases": "Cases",
+  "/dashboard/score": "Score transactions",
   "/dashboard/models": "Model comparison",
   "/dashboard/steps": "Time steps",
   "/dashboard/settings": "Settings",

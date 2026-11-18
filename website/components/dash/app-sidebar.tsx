@@ -11,6 +11,7 @@ import {
   ListFilter,
   Network,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,6 +48,7 @@ export function AppSidebar() {
         { title: "Alert queue", url: "/dashboard/alerts/", icon: ListFilter, badge: newCount },
         { title: "Flow canvas", url: "/dashboard/flow/", icon: Network },
         { title: "Cases", url: "/dashboard/cases/", icon: Briefcase, badge: openCases },
+        { title: "Score", url: "/dashboard/score/", icon: Sparkles },
       ],
     },
     {
