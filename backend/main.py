@@ -17,13 +17,15 @@ import joblib
 import networkx as nx
 import numpy as np
 import pandas as pd
-from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from chainsleuth.config import DATA_PROCESSED, MODELS_DIR
 from chainsleuth.data import load_dataset, load_raw
 from chainsleuth.splits import feature_cols
 
+from backend import scoring
 from backend import workflow as wf
 
 LABEL_MAP = {1: "illicit", 0: "licit", -1: "unknown"}
@@ -400,3 +402,67 @@ def console_settings(body: dict = Body(...)):
 @app.post("/api/console/reset")
 def console_reset():
     return _act(wf.reset)
+
+
+# ---------------------------------------------------------------- scoring
+# Use the trained models directly: any transaction id in the dataset, or rows
+# uploaded as CSV. backend/scoring.py has the parsing and the in-sample rules.
+
+def rf_model():
+    if "rf" not in _state:
+        path = MODELS_DIR / "random_forest.joblib"
+        _state["rf"] = joblib.load(path) if path.exists() else None
+    return _state["rf"]
+
+
+@app.get("/api/score/tx/{tx_id}")
+def score_tx(tx_id: int, top: int = Query(10, ge=1, le=30)):
+    st = state()
+    if tx_id not in st["feat"].index:
+        raise HTTPException(404, f"tx {tx_id} is not in the Elliptic dataset")
+    row = st["feat"].loc[[tx_id]].reset_index()
+    (scored,) = scoring.score_frame(row, st["model"], rf_model(), explainer(), top=top)
+    s = st["scores"]
+    hit = s[s["tx_id"] == tx_id]
+    hybrid = None
+    if not hit.empty:
+        hybrid = _opt(_rank_score(hit).iloc[0])
+    return {
+        **scored,
+        "label": LABEL_MAP[int(st["label"].get(tx_id, -1))],
+        "hybrid": hybrid,
+        "in_degree": len(st["in_adj"].get(tx_id, ())),
+        "out_degree": len(st["out_adj"].get(tx_id, ())),
+    }
+
+
+@app.post("/api/score/batch")
+async def score_batch(request: Request):
+    """Body: CSV text (raw Elliptic layout or a header naming local_*/agg_*)."""
+    raw = await request.body()
+    try:
+        frame = scoring.parse_csv(raw)
+    except scoring.ScoreInputError as e:
+        raise HTTPException(422, str(e)) from e
+    st = state()
+    rows = scoring.score_frame(frame, st["model"], rf_model(), explainer())
+    labels = st["label"]
+    for r in rows:
+        r["label"] = LABEL_MAP[int(labels.get(r["tx_id"], -1))] if r["tx_id"] is not None else "unknown"
+    xs = np.array([r["xgb"] for r in rows])
+    return {
+        "n": len(rows),
+        "n_flagged": int((xs >= 0.5).sum()),
+        "n_in_sample": sum(r["in_sample"] for r in rows),
+        "rows": rows,
+    }
+
+
+@app.get("/api/score/sample", response_class=PlainTextResponse)
+def score_sample(n: int = Query(25, ge=1, le=scoring.MAX_ROWS),
+                 label: str = Query("any", pattern="^(any|illicit|licit|unknown)$"),
+                 seed: int = 0):
+    """Real test-window rows in the raw Elliptic CSV layout, to try the upload with."""
+    st = state()
+    return PlainTextResponse(scoring.sample_csv(st["df"], n, label, seed), media_type="text/csv",
+                             headers={"content-disposition": f'attachment; filename="elliptic_sample_{label}_{n}.csv"'})
