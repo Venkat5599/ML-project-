@@ -52,10 +52,15 @@ def test_row_limit(monkeypatch):
 
 
 def test_windows_and_in_sample():
-    assert scoring.window_of(5) == "train" and scoring.in_sample(5)
-    assert scoring.window_of(32) == "validation" and scoring.in_sample(32)
-    assert scoring.window_of(40) == "test" and not scoring.in_sample(40)
-    assert scoring.window_of(None) == "unknown" and not scoring.in_sample(None)
+    assert scoring.window_of(5) == "train" and scoring.in_sample(5, 1)
+    assert scoring.window_of(32) == "validation" and scoring.in_sample(32, 0)
+    assert scoring.window_of(40) == "test" and not scoring.in_sample(40, 1)
+    assert scoring.window_of(None) == "unknown" and not scoring.in_sample(None, 1)
+
+
+def test_unlabelled_or_unknown_rows_are_never_in_sample():
+    assert not scoring.in_sample(5, -1)  # unlabelled: excluded from training
+    assert not scoring.in_sample(5, None)  # uploaded row the dataset doesn't know
 
 
 class _Model:
@@ -96,6 +101,18 @@ def test_score_known_tx_in_training_window(client):
     assert r["xgb"] == pytest.approx(0.9526, abs=1e-4)
     assert r["reasons"][0]["feature"] == "local_1" and r["hybrid"] is None
     assert r["out_degree"] == 1
+
+
+def test_unlabelled_early_tx_is_out_of_sample(client):
+    main._state["label"].loc[7] = -1
+    assert client.get("/api/score/tx/7").json()["in_sample"] is False
+
+
+def test_batch_early_rows_in_sample_only_when_labelled(client):
+    known = ",".join(["7", "10", "1"] + ["0"] * 164)
+    new = ",".join(["999", "10", "1"] + ["0"] * 164)
+    r = client.post("/api/score/batch", content=f"{known}\n{new}", headers={"content-type": "text/csv"}).json()
+    assert [x["in_sample"] for x in r["rows"]] == [True, False] and r["n_in_sample"] == 1
 
 
 def test_score_test_window_tx_carries_hybrid(client):
