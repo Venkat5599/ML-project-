@@ -40,7 +40,11 @@ export default function Overview() {
   return (
     <>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi title="In queue" value={q.length} hint={`score ≥ ${threshold.toFixed(2)} · of ${win ? fmtInt(win.n_scored) : "–"} scored`} />
+        <Kpi
+          title="Above threshold"
+          value={win ? fmtInt(win.above_threshold) : "–"}
+          hint={`score ≥ ${threshold.toFixed(2)} · of ${win ? fmtInt(win.n_scored) : "–"} scored`}
+        />
         <Kpi title="Unreviewed" value={count("new")} hint={`${count("reviewing")} in review`} />
         <Kpi title="Escalated" value={count("escalated")} hint={`${cases.filter((c) => c.status !== "closed").length} open cases`} />
         <Kpi title="Cleared" value={count("cleared")} hint="false positives" />
@@ -50,7 +54,7 @@ export default function Overview() {
         <Card>
           <CardHeader>
             <CardTitle className="font-normal">Flagged per time step</CardTitle>
-            <CardDescription>Queue alerts in the test window (steps 35–49), by label</CardDescription>
+            <CardDescription>Top {win?.limit ?? "–"} alerts above the threshold, by step and label</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={cfg} className="h-64 w-full">

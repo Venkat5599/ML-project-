@@ -62,7 +62,7 @@ export interface Snapshot {
   cases: Case[];
   activity: Activity[];
   settings: Settings;
-  window: { n_scored: number; steps: [number, number]; limit: number };
+  window: { n_scored: number; steps: [number, number]; limit: number; above_threshold: number };
   caseId?: string;
 }
 
