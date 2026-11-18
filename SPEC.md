@@ -49,13 +49,17 @@ pytest tests/                            # unit tests
 
 ```
 data/raw/          Downloaded Elliptic CSVs (gitignored)
-data/processed/    Parquet cache (gitignored)
+data/processed/    Parquet cache, test scores, workflow.sqlite (gitignored)
+models/            Fitted models (gitignored)
 results/figures/   All plots used in the report
-results/metrics/   metrics JSON/CSVs, predictions
-report/            Report draft + figure assets
-src/chainsleuth/   Reusable pipeline code
+results/metrics/   metrics JSON/CSVs
+report/            Report + DOCX export
+chainsleuth/       Reusable pipeline code
 experiments/       Runnable experiment entrypoints (numbered phases)
-tests/             Unit tests for data/split/metrics logic
+backend/           FastAPI scoring/explanation API + analyst workflow store
+frontend/          Next.js investigation app
+website/           Next.js static site + investigation console
+tests/             Unit tests: split/metrics logic, workflow, API contract
 ```
 
 ## Evaluation Contract
