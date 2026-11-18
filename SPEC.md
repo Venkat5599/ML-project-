@@ -92,6 +92,6 @@ tests/             Unit tests: split/metrics logic, workflow, API contract
       (`experiment_random_split_xgboost.json`: +18.6 AP points from leakage)
 - [x] EDA figures: class imbalance, labels-over-time, feature distributions,
       correlation heatmap, graph degree distribution (`results/figures/`)
-- [ ] Report-ready results section generated from saved metrics (no hand-typed numbers)
-      - partial: `comparison.md`, the console's `real.ts` and `REPRODUCTION.md` are
-      generated; the tables in `report/REPORT.md` are still copied in by hand
+- [x] Report-ready results section generated from saved metrics (no hand-typed numbers)
+      (`python -m experiments.report_tables` renders every section-5 table; a test
+      fails when they drift from `results/metrics`)
